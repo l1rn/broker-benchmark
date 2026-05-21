@@ -24,6 +24,7 @@ func NewKafkaConsumer(conf *common.BenchmarkConfig) (*KafkaConsumer, error) {
 		MaxBytes:       10e6,
 		CommitInterval: 0,
 		StartOffset:    kafka.FirstOffset,
+		MaxWait: 1 * time.Second,
 	})
 
 	return &KafkaConsumer{
@@ -46,35 +47,54 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 	errors := 0
 	start := time.Now()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
 		}(i)
 		for received < total {
-			msg, err := c.reader.FetchMessage(context.Background())
-			if err != nil {
-				errors++
-				continue
-			}
-			if !msg.Time.IsZero() {
-				latency := time.Since(msg.Time)
+			select {
+			case <-ctx.Done():
+				goto done
+			default:
+				msg, err := c.reader.FetchMessage(context.Background())
+				if err != nil {
+					if err == context.DeadlineExceeded{
+						break
+					}
+					mu.Lock()
+					errors++
+					mu.Unlock()
+					continue
+				}
+				if !msg.Time.IsZero() {
+					latency := time.Since(msg.Time)
+					mu.Lock()
+					latencies = append(latencies, latency)
+					mu.Unlock()
+				}
+				if err := c.reader.CommitMessages(context.Background(), msg); err != nil {
+					errors++
+				}
 				mu.Lock()
-				latencies = append(latencies, latency)
+				received++
+				count := received
 				mu.Unlock()
+				
+				if count%1000 == 0 {
+                    println("Produced:", count, "/", total)
+                }
 			}
-			if err := c.reader.CommitMessages(context.Background(), msg); err != nil {
-				errors++
-			}
-			mu.Lock()
-			received++
-			mu.Unlock()
 		}
 	}
 
-	duration := time.Since(start)
-	totalBytes := int64(total) * int64(c.conf.MessageSize)
-	metrics := common.ComputeMetrics(latencies, received-errors, duration, totalBytes)
-	metrics.Errors = errors
-	return &metrics, nil
+done:
+    duration := time.Since(start)
+    totalBytes := int64(total) * int64(c.conf.MessageSize)
+    metrics := common.ComputeMetrics(latencies, received-errors, duration, totalBytes)
+    metrics.Errors = errors
+    return &metrics, nil
 }

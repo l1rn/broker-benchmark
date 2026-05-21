@@ -20,6 +20,7 @@ func main() {
 	consumers := flag.Int("consumers", 1, "Number of concurrent consumers")
 	queueTopic := flag.String("queue", "benchmark_queue", "Queue/Topic name")
 	rabbitURL := flag.String("rabbit-url", "amqp://guest:guest@localhost:5672/", "RabbitMQ URL")
+	brokers := flag.String("brokers", "localhost:9092", "Kafka brokers (comma-separated)")
 	kafkaTopic := flag.String("kafka-topic", "benchmark_topic", "Kafka topic")
 	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
 	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
@@ -33,6 +34,7 @@ func main() {
 		MessageSize:       *msgSize,
 		Producers:         *producers,
 		Consumers:         *consumers,
+		Brokers: 		   *brokers,		
 		QueueTopic:        *queueTopic,
 		RabbitURL:         *rabbitURL,
 		KafkaTopic:        *kafkaTopic,

@@ -1,11 +1,22 @@
-.PHONY: build clean run-rabbit-producer run-rabbit-consumer run-kafka-produce run-kafka-consumer
+.PHONY: build clean up down logs \
+        run-rabbit-producer run-rabbit-consumer run-rabbit-e2e \
+        run-kafka-producer run-kafka-consumer run-kafka-e2e
+
+up:
+	docker-compose up -d
+
+down:
+	docker-compose down -v
+
+logs:
+	docker-compose logs -f
 
 build:
-	go mod tiny
+	go mod tidy
 	go build -o bin/benchmark main.go
 
 clean:
-	rm -rf bin/
+	rm -rf bin
 
 run-rabbit-producer: build
 	./bin/benchmark -broker rabbitmq -mode producer -count 100000 -size 1024 -producers 4

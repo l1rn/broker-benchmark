@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"broker-benchmark/common"
+	"broker-benchmark/kafka"
 	"broker-benchmark/rabbitmq"
 )
 
@@ -19,18 +20,25 @@ func main() {
 	consumers := flag.Int("consumers", 1, "Number of concurrent consumers")
 	queueTopic := flag.String("queue", "benchmark_queue", "Queue/Topic name")
 	rabbitURL := flag.String("rabbit-url", "amqp://guest:guest@localhost:5672/", "RabbitMQ URL")
-
+	kafkaTopic := flag.String("kafka-topic", "benchmark_topic", "Kafka topic")
+	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
+	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
+	kafkaBatch := flag.Int("kafka-batch", 100, "Kafka batch size")
 	flag.Parse()
 
 	conf := &common.BenchmarkConfig{
-		Broker: *broker,
-		Mode: *mode,
-		MessageCount: *msgCount,
-		MessageSize: *msgSize,
-		Producers: *producers,
-		Consumers: *consumers,
-		QueueTopic: *queueTopic,
-		RabbitURL: *rabbitURL,
+		Broker:            *broker,
+		Mode:              *mode,
+		MessageCount:      *msgCount,
+		MessageSize:       *msgSize,
+		Producers:         *producers,
+		Consumers:         *consumers,
+		QueueTopic:        *queueTopic,
+		RabbitURL:         *rabbitURL,
+		KafkaTopic:        *kafkaTopic,
+		KafkaPartition:    *kafkaPartition,
+		KafkaRequiredAcks: *kafkaAcks,
+		KafkaBatchSize:    *kafkaBatch,
 	}
 
 	var metrics *common.Metrics
@@ -56,6 +64,27 @@ func main() {
 			metrics, err = rabbitmq.RunE2E(conf)
 		default:
 			log.Fatal("Unknown mode for rabbitmq")
+		}
+	case "kafka":
+		switch conf.Mode {
+		case "producer":
+			p, err := kafka.NewKafkaProducer(conf)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer p.Close()
+			metrics, err = p.Run()
+		case "consumer":
+			c, err := kafka.NewKafkaConsumer(conf)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer c.Close()
+			metrics, err = c.Run()
+		case "e2e":
+			metrics, err = kafka.RunE2E(conf)
+		default:
+			log.Fatal("Unknown mode for kafka")
 		}
 	}
 

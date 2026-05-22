@@ -19,6 +19,7 @@ func NewKafkaConsumer(conf *common.BenchmarkConfig) (*KafkaConsumer, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        []string{conf.Brokers},
 		Topic:          conf.KafkaTopic,
+		GroupID: "benchmark-group",
 		Partition:      conf.KafkaPartition,
 		MinBytes:       1,
 		MaxBytes:       10e6,
@@ -60,7 +61,7 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 			case <-ctx.Done():
 				goto done
 			default:
-				msg, err := c.reader.FetchMessage(context.Background())
+				msg, err := c.reader.FetchMessage(ctx)
 				if err != nil {
 					if err == context.DeadlineExceeded{
 						break

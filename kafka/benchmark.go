@@ -31,6 +31,8 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 		prodMetrics, prodErr = producer.Run()
 	}()
 
+	time.Sleep(2 * time.Second)
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

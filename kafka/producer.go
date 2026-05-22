@@ -18,13 +18,13 @@ type KafkaProducer struct {
 
 func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 	writer := &kafka.Writer{
-		Addr:         kafka.TCP(conf.Broker),
+		Addr:         kafka.TCP("localhost:9092"),
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequiredAcks(conf.KafkaRequiredAcks),
 		BatchSize:    conf.KafkaBatchSize,
-		BatchTimeout: 10 * time.Millisecond,
-		Async:        false,
+		BatchTimeout: 100 * time.Millisecond,
+		Async:        true,
 	}
 
 	return &KafkaProducer{
@@ -63,14 +63,16 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 		go func(workerID int) {
 			defer wg.Done()
 			for range work {
+				mu.Lock()
 				seq := uint64(workerID*1000000 + len(latencies))
+				mu.Unlock()
 				ts := time.Now()
 				payload := make([]byte, msgSize)
 				copy(payload, basePayload)
 
-				err := p.writer.WriteMessages(context.Background(),
+				err := p.writer.WriteMessages(
+					context.Background(),
 					kafka.Message{
-						Topic: p.conf.KafkaTopic,
 						Key:   []byte(fmt.Sprintf("%d", seq)),
 						Value: payload,
 						Time:  ts,
@@ -78,6 +80,7 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 				)
 
 				if err != nil {
+					fmt.Println("WRITE ERROR:", err)
 					mu.Lock()
 					errors++
 					mu.Unlock()

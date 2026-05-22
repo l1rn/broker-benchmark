@@ -38,8 +38,8 @@ func (m Metrics) Print(title string) {
 
 	if len(m.Latencies) > 0 {
 		fmt.Printf("Latency (p50): %v\n", m.P50)
-		fmt.Printf("Latency (p95): %v\n", m.P50)
-		fmt.Printf("Latency (p99): %v\n", m.P50)
+		fmt.Printf("Latency (p95): %v\n", m.P95)
+		fmt.Printf("Latency (p99): %v\n", m.P99)
 	}
 
 	if m.Errors > 0 {

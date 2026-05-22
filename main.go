@@ -24,7 +24,7 @@ func main() {
 	kafkaTopic := flag.String("kafka-topic", "benchmark_topic", "Kafka topic")
 	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
 	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
-	kafkaBatch := flag.Int("kafka-batch", 100, "Kafka batch size")
+	kafkaBatch := flag.Int("kafka-batch", 5000, "Kafka batch size")
 	flag.Parse()
 
 	conf := &common.BenchmarkConfig{
@@ -81,7 +81,6 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			defer c.Close()
 			metrics, err = c.Run()
 		case "e2e":
 			metrics, err = kafka.RunE2E(conf)

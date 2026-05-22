@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -62,7 +63,7 @@ func (p *RabbitProducer) Close() {
 	if p.channel != nil {
 		p.channel.Close()
 	}
-	if p.conf != nil {
+	if p.conn != nil {
 		p.conn.Close()
 	}
 }
@@ -71,6 +72,14 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 	total := p.conf.MessageCount
 	concurrency := p.conf.Producers
 	msgSize := p.conf.MessageSize
+	
+	fmt.Printf("DEBUG: Starting producer | Messages=%d | Concurrency=%d | Size=%d\n", 
+        total, concurrency, msgSize)
+	
+    if total == 0 {
+        return &common.Metrics{}, fmt.Errorf("MessageCount is 0 - check command line flags")
+    }
+	
 
 	basePayload := make([]byte, msgSize)
 	for i := range basePayload {
@@ -78,15 +87,16 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 	}
 
 	var wg sync.WaitGroup
-	work := make(chan int, total)
-	for i := 0; i < total; i++ {
-		work <- i
-	}
-	close(work)
-
 	var mu sync.Mutex
 	allLatencies := []time.Duration{}
-	errors := 0
+	var errors, successful int 
+
+	work := make(chan struct {}, total)
+	for i := 0; i < total; i++ {
+		work <- struct{}{}
+	}
+
+	close(work)
 
 	start := time.Now()
 
@@ -112,8 +122,8 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 				mu.Unlock()
 				return
 			}
-
-			confirms := ch.NotifyPublish(make(chan amqp.Confirmation, 1))
+			confirmCh := make(chan amqp.Confirmation, 64)
+			confirms := ch.NotifyPublish(confirmCh)
 
 			for range work {
 				ts := time.Now()
@@ -141,24 +151,30 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 				}
 
 				confirm := <-confirms
+				latency := time.Since(ts)
+
+				mu.Lock()
 				if confirm.Ack {
-					latency := time.Since(ts)
-					mu.Lock()
 					allLatencies = append(allLatencies, latency)
-					mu.Unlock()
+					successful++
 				} else {
-					mu.Lock()
 					errors++
-					mu.Unlock()
+					fmt.Printf("Worker %d: Message NACKed\n", workerID)
 				}
+				mu.Unlock()
 			}
 		}(i)
 	}
 
 	wg.Wait()
 	duration := time.Since(start)
+
+	fmt.Printf("DEBUG SUMMARY: Successful=%d | Errors=%d | Latencies=%d | Duration=%.2fs\n",
+        successful, errors, len(allLatencies), duration.Seconds())
+
 	totalBytes := int64(total) * int64(msgSize)
-	metrics := common.ComputeMetrics(allLatencies, total-len(allLatencies)-errors, duration, totalBytes)
+	metrics := common.ComputeMetrics(allLatencies, successful, duration, totalBytes)
 	metrics.Errors = errors
+	metrics.TotalMessages = successful
 	return &metrics, nil
 }

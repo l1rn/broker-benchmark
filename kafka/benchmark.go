@@ -19,7 +19,6 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer consumer.Close()
 
 	var wg sync.WaitGroup
 	var prodMetrics, consMetrics *common.Metrics

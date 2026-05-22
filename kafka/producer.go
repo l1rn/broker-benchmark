@@ -23,8 +23,9 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequiredAcks(conf.KafkaRequiredAcks),
 		BatchSize:    conf.KafkaBatchSize,
-		BatchTimeout: 100 * time.Millisecond,
+		BatchTimeout: 25 * time.Millisecond,
 		Async:        true,
+		Compression:  kafka.Snappy,
 	}
 
 	return &KafkaProducer{
@@ -55,49 +56,56 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 
 	var mu sync.Mutex
 	var latencies []time.Duration
-	errors := 0
+	var errors int64
 	start := time.Now()
 
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			for range work {
-				mu.Lock()
+			messages := make([]kafka.Message, 0, p.conf.KafkaBatchSize)
+			for j := 0; j < total/concurrency; j++ {
 				seq := uint64(workerID*1000000 + len(latencies))
-				mu.Unlock()
-				ts := time.Now()
 				payload := make([]byte, msgSize)
 				copy(payload, basePayload)
 
-				err := p.writer.WriteMessages(
-					context.Background(),
-					kafka.Message{
-						Key:   []byte(fmt.Sprintf("%d", seq)),
-						Value: payload,
-						Time:  ts,
-					},
-				)
+				messages = append(messages, kafka.Message{
+					Key: []byte(fmt.Sprintf("%d", seq)),
+					Value: payload,
+					Time: time.Now(),
+				})
 
-				if err != nil {
-					fmt.Println("WRITE ERROR:", err)
-					mu.Lock()
-					errors++
-					mu.Unlock()
-					continue
+				if len(messages) >= p.conf.KafkaBatchSize {
+					p.sendBatch(messages, &latencies, &errors, &mu)
+					messages = messages[:0]
 				}
-
-				latency := time.Since(ts)
-				mu.Lock()
-				latencies = append(latencies, latency)
-				mu.Unlock()
 			}
+			if len(messages) > 0 {
+                p.sendBatch(messages, &latencies, &errors, &mu)
+            }
 		}(i)
 	}
 	wg.Wait()
 	duration := time.Since(start)
 	totalBytes := int64(total) * int64(msgSize)
-	metrics := common.ComputeMetrics(latencies, total-errors, duration, totalBytes)
-	metrics.Errors = errors
+    metrics := common.ComputeMetrics(latencies, total-int(errors), duration, totalBytes)
+    metrics.Errors = int(errors)
 	return &metrics, nil
+}
+
+func (p *KafkaProducer) sendBatch(messages []kafka.Message, latencies *[]time.Duration, errors *int64, mu *sync.Mutex) {
+    ts := time.Now()
+    err := p.writer.WriteMessages(context.Background(), messages...)
+    latency := time.Since(ts)
+
+    mu.Lock()
+    defer mu.Unlock()
+
+    if err != nil {
+        *errors += int64(len(messages))
+        fmt.Println("WRITE ERROR:", err)
+        return
+    }
+
+    *latencies = append(*latencies, latency)
 }

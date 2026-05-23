@@ -3,13 +3,13 @@
         run-kafka-producer run-kafka-consumer run-kafka-e2e
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down -v
+	docker compose down -v
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 build:
 	go mod tidy

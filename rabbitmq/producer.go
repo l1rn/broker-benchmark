@@ -79,7 +79,6 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
     if total == 0 {
         return &common.Metrics{}, fmt.Errorf("MessageCount is 0 - check command line flags")
     }
-	
 
 	basePayload := make([]byte, msgSize)
 	for i := range basePayload {
@@ -122,6 +121,7 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 				mu.Unlock()
 				return
 			}
+			
 			confirmCh := make(chan amqp.Confirmation, 64)
 			confirms := ch.NotifyPublish(confirmCh)
 

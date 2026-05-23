@@ -40,7 +40,7 @@ func NewRabbitConsumer(conf *common.BenchmarkConfig) (*RabbitConsumer, error) {
 		false,
 		nil,
 	)
-
+		
 	if err := ch.Qos(conf.Consumers*20, 0, false); err != nil {
 		ch.Close()
 		conn.Close()
@@ -91,13 +91,14 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 			}
 			defer ch.Close()
 			
+			
 			if err := ch.Qos(50, 0, false); err != nil {
 				log.Printf("Consumer %d QoS error: %v", workerID, err)
 			}
 
 			deliveries, err := ch.Consume(
 				c.queue,
-				fmt.Sprintf("consuver-%d", workerID),
+				fmt.Sprintf("consumer-%d", workerID),
 				false, false, false, false, nil,
 			)
 
@@ -149,4 +150,15 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 	metrics.Errors = totalErrors
 	
 	return &metrics, nil
+}
+
+func (c *RabbitConsumer) PurgeQueue() error {
+	ch, err := c.conn.Channel()
+	if err != nil {
+		return err
+	}
+	defer ch.Close()
+
+	_, err = ch.QueuePurge(c.queue, false)
+	return err
 }

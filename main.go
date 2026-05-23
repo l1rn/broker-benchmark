@@ -61,6 +61,12 @@ func main() {
 				log.Fatal(err)
 			}
 			defer c.Close()
+			err = c.PurgeQueue()
+			
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			metrics, err = c.Run()
 		case "e2e":
 			metrics, err = rabbitmq.RunE2E(conf)

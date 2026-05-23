@@ -74,9 +74,7 @@ func main() {
 			log.Fatal("Unknown mode for rabbitmq")
 		}
 	case "kafka":
-		numPartitions := *consumers
-		
-		if err := kafka.EnsureTopic(*brokers, *kafkaTopic, *&numPartitions); err != nil {
+		if err := kafka.EnsureTopic(*brokers, *kafkaTopic, *consumers); err != nil {
 			log.Fatalf("failed to ensure topic: %v", err)
 		}
 		switch conf.Mode {

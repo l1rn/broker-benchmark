@@ -39,7 +39,7 @@ func (c *KafkaConsumer) Run(mode string) (*common.Metrics, error) {
 	var latencies []time.Duration
 
 	start := time.Now()
-	groupID := "benchmark-group"
+	groupID := fmt.Sprintf("benchmark-group-%d", time.Now().UnixNano())
 
 	var startOffset int64
 

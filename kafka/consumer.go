@@ -25,12 +25,19 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 	concurrency := c.conf.Consumers
 	msgSize := c.conf.MessageSize
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if total == 0 {
+		cancel()
+	}
+
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	var received int64
-	var errors int64
+	var received, errors int
 	var latencies []time.Duration
+	
 	start := time.Now()
 
 	for i := 0; i < concurrency; i++ {
@@ -50,7 +57,12 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 			})
 			defer reader.Close()
 
-			for atomicReceived := int64(0); atomicReceived < int64(total); {
+			for {
+				select {
+					case <-ctx.Done():
+						return
+					default:
+				}
 				msg, err := reader.FetchMessage(context.Background())
 				if err != nil {
 					mu.Lock()
@@ -70,9 +82,14 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 					mu.Lock()
 					errors++
 					mu.Unlock()
+					continue
 				}
 
 				mu.Lock()
+				if received >= total {
+					mu.Unlock()
+					return
+				}
 				received++
 				count := received
 				mu.Unlock()
@@ -81,7 +98,8 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 					fmt.Printf("Consumed: %d / %d\n", count, total)
 				}
 
-				if count >= int64(total) {
+				if count >= total {
+					cancel()
 					break
 				}
 			}
@@ -90,8 +108,12 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 	wg.Wait()
 	duration := time.Since(start)
 
-	totalBytes := int64(received) * int64(msgSize)
-	metrics := common.ComputeMetrics(latencies, int(received)-int(errors), duration, totalBytes)
+	successful := received - errors
+	if successful < 0 {
+		successful = 0
+	}
+	totalBytes := int64(successful) * int64(msgSize)
+	metrics := common.ComputeMetrics(latencies, successful, duration, totalBytes)
 	metrics.Errors = int(errors)
 
 	return &metrics, nil

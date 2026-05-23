@@ -22,9 +22,9 @@ func main() {
 	rabbitURL := flag.String("rabbit-url", "amqp://guest:guest@localhost:5672/", "RabbitMQ URL")
 	brokers := flag.String("brokers", "localhost:9092", "Kafka brokers (comma-separated)")
 	kafkaTopic := flag.String("kafka-topic", "benchmark_topic", "Kafka topic")
-	kafkaPartition := flag.Int("kafka-partition", 4, "Kafka partition")
+	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
 	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
-	kafkaBatch := flag.Int("kafka-batch", 5000, "Kafka batch size")
+	kafkaBatch := flag.Int("kafka-batch", 1, "Kafka batch size")
 	flag.Parse()
 
 	conf := &common.BenchmarkConfig{
@@ -74,7 +74,9 @@ func main() {
 			log.Fatal("Unknown mode for rabbitmq")
 		}
 	case "kafka":
-		if err := kafka.EnsureTopic(*brokers, *kafkaTopic, *kafkaPartition); err != nil {
+		numPartitions := *consumers
+		
+		if err := kafka.EnsureTopic(*brokers, *kafkaTopic, *&numPartitions); err != nil {
 			log.Fatalf("failed to ensure topic: %v", err)
 		}
 		switch conf.Mode {
@@ -90,7 +92,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			metrics, err = c.Run()
+			metrics, err = c.Run("normal")
 		case "e2e":
 			metrics, err = kafka.RunE2E(conf)
 		default:

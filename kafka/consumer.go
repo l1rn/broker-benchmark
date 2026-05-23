@@ -20,7 +20,7 @@ func NewKafkaConsumer(conf *common.BenchmarkConfig) (*KafkaConsumer, error) {
 }
 
 
-func (c *KafkaConsumer) Run() (*common.Metrics, error) {
+func (c *KafkaConsumer) Run(mode string) (*common.Metrics, error) {
 	total := c.conf.MessageCount
 	concurrency := c.conf.Consumers
 	msgSize := c.conf.MessageSize
@@ -37,8 +37,17 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 
 	var received, errors int
 	var latencies []time.Duration
-	
+
 	start := time.Now()
+	groupID := "benchmark-group"
+
+	var startOffset int64
+
+	if mode == "e2e" {
+		startOffset = kafka.FirstOffset
+	} else {
+		startOffset = kafka.LastOffset
+	}
 
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -47,12 +56,12 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 			reader := kafka.NewReader(kafka.ReaderConfig{
 				Brokers:        []string{c.conf.Brokers},
 				Topic:          c.conf.KafkaTopic,
-				GroupID: 		fmt.Sprintf("benchmark-group-%d", workerID),
+				GroupID: 		groupID,
 				Partition:      c.conf.KafkaPartition,
 				MinBytes:       1,
 				MaxBytes:       10 * 1024 * 1024,
 				MaxWait: 100 * time.Millisecond,
-				StartOffset:    kafka.FirstOffset,
+				StartOffset:    startOffset,
 				CommitInterval:  0,
 			})
 			defer reader.Close()
@@ -93,10 +102,6 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 				received++
 				count := received
 				mu.Unlock()
-
-				if count%5000 == 0 {
-					fmt.Printf("Consumed: %d / %d\n", count, total)
-				}
 
 				if count >= total {
 					cancel()

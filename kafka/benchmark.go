@@ -36,7 +36,7 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(500 * time.Millisecond)
-		consMetrics, consErr = consumer.Run()
+		consMetrics, consErr = consumer.Run("e2e")
 	}()
 	wg.Wait()
 	if prodErr != nil {

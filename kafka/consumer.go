@@ -12,7 +12,6 @@ import (
 )
 
 type KafkaConsumer struct {
-	reader *kafka.Reader
 	conf   *common.BenchmarkConfig
 }
 
@@ -45,9 +44,9 @@ func (c *KafkaConsumer) Run() (*common.Metrics, error) {
 				Partition:      c.conf.KafkaPartition,
 				MinBytes:       1,
 				MaxBytes:       10 * 1024 * 1024,
-				MaxWait: 500 * time.Millisecond,
+				MaxWait: 100 * time.Millisecond,
 				StartOffset:    kafka.FirstOffset,
-				CommitInterval: 1 * time.Second,
+				CommitInterval:  0,
 			})
 			defer reader.Close()
 

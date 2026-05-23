@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -15,7 +14,6 @@ import (
 
 type RabbitConsumer struct {
 	conn    *amqp.Connection
-	channel *amqp.Channel
 	queue   string
 	conf    *common.BenchmarkConfig
 }
@@ -26,55 +24,38 @@ func NewRabbitConsumer(conf *common.BenchmarkConfig) (*RabbitConsumer, error) {
 		return nil, err
 	}
 
-	ch, err := conn.Channel()
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	_, err = ch.QueueDeclare(
-		conf.QueueTopic,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-		
-	if err := ch.Qos(conf.Consumers*20, 0, false); err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, err
-	}
-	
 	return &RabbitConsumer{
 		conn:    conn,
-		channel: ch,
 		queue:   conf.QueueTopic,
 		conf:    conf,
 	}, nil
 }
 
 func (c *RabbitConsumer) Close() {
-	if c.channel != nil {
-		c.channel.Close()
-	}
 	if c.conn != nil {
 		c.conn.Close()
 	}
 }
 
 func (c *RabbitConsumer) Run() (*common.Metrics, error) {
+	
 	total := c.conf.MessageCount
 	concurrency := c.conf.Consumers
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var received, errors int64
-	var latencies []time.Duration
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if total == 0 {
+		cancel()
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var received, errors int
+	var latencies []time.Duration
+
 	start := time.Now()
+	
 
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -90,8 +71,7 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 				return
 			}
 			defer ch.Close()
-			
-			
+
 			if err := ch.Qos(50, 0, false); err != nil {
 				log.Printf("Consumer %d QoS error: %v", workerID, err)
 			}
@@ -124,14 +104,20 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 						latencies = append(latencies, latency)
 						mu.Unlock()
 					}
+
 					if err := d.Ack(false); err != nil {
-						atomic.AddInt64(&errors, 1)
+						mu.Lock()
+						errors++
+						mu.Unlock()
+						continue
 					}
 
-					if atomic.AddInt64(&received, 1) >= int64(total) {
+					mu.Lock()
+					received++
+					if received >= total {
 						cancel()
-						return 
 					}
+					mu.Unlock()
 				case <-ctx.Done():
 					return
 				}
@@ -141,14 +127,11 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 
 	wg.Wait()
 	duration := time.Since(start)
-	
-	totalReceived := int(atomic.LoadInt64(&received))
-	totalErrors := int(atomic.LoadInt64(&errors))
 
 	totalBytes := int64(total) * int64(c.conf.MessageSize)
-	metrics := common.ComputeMetrics(latencies, totalReceived-totalErrors, duration, totalBytes)
-	metrics.Errors = totalErrors
-	
+	metrics := common.ComputeMetrics(latencies, received-errors, duration, totalBytes)
+	metrics.Errors = errors
+
 	return &metrics, nil
 }
 

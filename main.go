@@ -25,6 +25,8 @@ func main() {
 	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
 	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
 	kafkaBatch := flag.Int("kafka-batch", 1, "Kafka batch size")
+
+	metricsTextfile := flag.String("metrics-textfile", "/tmp/benchmark_metrics.prom", "Path to Prometheus textfile")
 	flag.Parse()
 
 	conf := &common.BenchmarkConfig{
@@ -34,7 +36,7 @@ func main() {
 		MessageSize:       *msgSize,
 		Producers:         *producers,
 		Consumers:         *consumers,
-		Brokers: 		   *brokers,		
+		Brokers:           *brokers,
 		QueueTopic:        *queueTopic,
 		RabbitURL:         *rabbitURL,
 		KafkaTopic:        *kafkaTopic,
@@ -62,7 +64,7 @@ func main() {
 			}
 			defer c.Close()
 			err = c.PurgeQueue()
-			
+
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -102,5 +104,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := common.WriteMetricsTextfile(*metricsTextfile, *metrics, conf.Broker); err != nil {
+		log.Printf("failed to write metrics textfile: %v", err)
+	}
 	metrics.Print(fmt.Sprintf("%s - %s", strings.ToUpper(conf.Broker), strings.ToUpper(conf.Mode)))
 }

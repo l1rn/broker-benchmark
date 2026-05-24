@@ -1,0 +1,51 @@
+prometheus.exporter.unix "host" { 
+  disable_collectors = ["cpu", "diskstats", "filesystem", "loadavg", "meminfo", "netdev", "pressure", "schedstat", "thermal_zone", "vmstat", "systemd", "uname", "xfs", "zfs"]
+  textfile {
+    directory = "/var/lib/alloy/textfile"
+  }
+}
+
+prometheus.scrape "rabbitmq" {
+  targets = [{
+    __address__ = "rabbitmq:15692",
+    job         = "rabbitmq",
+  }]
+  forward_to = [prometheus.relabel.add_job_label.receiver]
+}
+
+prometheus.exporter.kafka "broker" {
+  kafka_uris = ["kafka:9092"]
+}
+
+prometheus.scrape "kafka" {
+  targets    = prometheus.exporter.kafka.broker.targets
+  forward_to = [prometheus.relabel.add_job_label.receiver]
+}
+
+prometheus.scrape "alloy" {
+  targets = [{
+    __address__ = "localhost:12345",
+    job         = "alloy",
+  }]
+  forward_to = [prometheus.relabel.add_job_label.receiver]
+}
+
+prometheus.relabel "add_job_label" {
+  forward_to = [prometheus.remote_write.prom.receiver]
+
+  rule {
+    target_label = "job"
+    replacement  = "integrated"
+  }
+}
+
+prometheus.scrape "host_metrics" {
+  targets    = prometheus.exporter.unix.host.targets
+  forward_to = [prometheus.relabel.add_job_label.receiver]
+}
+
+prometheus.remote_write "prom" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}

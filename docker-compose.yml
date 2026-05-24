@@ -5,9 +5,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_PLUGINS: "rabbitmq_prometheus" 
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -46,7 +48,10 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
+      - "9999:9999"
     environment:
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
@@ -83,32 +88,60 @@ services:
     networks:
       - broker-net
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - prometheus_data:/prometheus
-    command: 
-      - '--storage.tsdb.path=/prometheus'
-    restart: unless-stopped
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_SECURITY_ADMIN_USER: admin
-      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    networks:
+      - broker-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-remote-write-receiver'   # crucial: enables api/v1/write
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - broker-net
     restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - /tmp/benchmark_metrics.prom:/var/lib/alloy/textfile/benchmark_metrics.prom
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+    networks:
+      - broker-net
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      grafana:
+        condition: service_started
+      zookeeper:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
 volumes: 
   rabbitmq_data:

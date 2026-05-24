@@ -71,11 +71,7 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 				return
 			}
 			defer ch.Close()
-
-			if err := ch.Qos(50, 0, false); err != nil {
-				log.Printf("Consumer %d QoS error: %v", workerID, err)
-			}
-
+			
 			deliveries, err := ch.Consume(
 				c.queue,
 				fmt.Sprintf("consumer-%d", workerID),

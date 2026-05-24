@@ -62,7 +62,6 @@ func (c *KafkaConsumer) Run(mode string) (*common.Metrics, error) {
 				MaxBytes:       10 * 1024 * 1024,
 				MaxWait: 100 * time.Millisecond,
 				StartOffset:    startOffset,
-				CommitInterval:  0,
 			})
 			defer reader.Close()
 

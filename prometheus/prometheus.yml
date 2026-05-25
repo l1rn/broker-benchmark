@@ -1,5 +1,12 @@
 global:
   scrape_interval: 15s
   
-remote_write:
-  - url: http://localhost:9090/api/v1/write
+scrape_configs:
+  - job_name: rabbitmq
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["rabbitmq:15692"]
+  
+  - job_name: kafka
+    static_configs:
+      - targets: ["kafka:9999"]

@@ -48,10 +48,11 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-      - "9999:9999"
+      - "7071:7071"
+
     environment:
       KAFKA_JMX_PORT: 9999
-      KAFKA_JMX_HOSTNAME: kafka
+      KAFKA_JMX_HOSTNAME: localhost
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 

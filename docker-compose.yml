@@ -50,6 +50,7 @@ services:
       - "29092:29092"
       - "7071:7071"
 
+      - "7071:7071"
     environment:
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_HOSTNAME: localhost
@@ -64,23 +65,23 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
+
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: localhost
+
+      KAFKA_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka.yml"
+
     volumes:
       - kafka_data:/var/lib/kafka/data
+      - ./jmx:/opt/jmx
     networks:
       - broker-net
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     container_name: kafdrop
-    depends_on:
-      - kafka
     ports:
       - "9000:9000"
     environment:
@@ -117,32 +118,6 @@ services:
     networks:
       - broker-net
     restart: unless-stopped
-
-  alloy:
-    image: grafana/alloy:latest
-    container_name: alloy
-    ports:
-      - "12345:12345"
-    volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy
-      - /tmp/benchmark_metrics.prom:/var/lib/alloy/textfile/benchmark_metrics.prom
-    command:
-      - run
-      - /etc/alloy/config.alloy
-      - --server.http.listen-addr=0.0.0.0:12345
-    networks:
-      - broker-net
-    depends_on:
-      prometheus:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
-      grafana:
-        condition: service_started
-      zookeeper:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
 
 volumes: 
   rabbitmq_data:

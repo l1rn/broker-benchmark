@@ -1,0 +1,21 @@
+# HELP benchmark_total_messages Total messages processed.
+# TYPE benchmark_total_messages gauge
+benchmark_total_messages{broker="kafka"} 10000
+# HELP benchmark_duration_seconds Benchmark duration.
+# TYPE benchmark_duration_seconds gauge
+benchmark_duration_seconds{broker="kafka"} 4.725402
+# HELP benchmark_throughput_msg_per_sec Messages per second.
+# TYPE benchmark_throughput_msg_per_sec gauge
+benchmark_throughput_msg_per_sec{broker="kafka"} 2116.22
+# HELP benchmark_throughput_mb_per_sec MB per second.
+# TYPE benchmark_throughput_mb_per_sec gauge
+benchmark_throughput_mb_per_sec{broker="kafka"} 2.07
+# HELP benchmark_latency_p50_seconds 50th percentile latency.
+# TYPE benchmark_latency_p50_seconds gauge
+benchmark_latency_p50_seconds{broker="kafka"} 0.000463
+# HELP benchmark_latency_p95_seconds 95th percentile latency.
+# TYPE benchmark_latency_p95_seconds gauge
+benchmark_latency_p95_seconds{broker="kafka"} 0.000578
+# HELP benchmark_latency_p99_seconds 99th percentile latency.
+# TYPE benchmark_latency_p99_seconds gauge
+benchmark_latency_p99_seconds{broker="kafka"} 0.000632

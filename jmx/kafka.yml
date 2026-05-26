@@ -1,2 +1,132 @@
 lowercaseOutputName: true
 lowercaseOutputLabelNames: true
+
+rules:
+  # --- Your existing rules (keep them) ---
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)PerSec\w*><>Count
+    name: kafka_server_brokertopicmetrics_$1_total
+    labels:
+      name: $1
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)PerSec\w*><>OneMinuteRate
+    name: kafka_server_brokertopicmetrics_$1_rate
+    labels:
+      name: $1
+  - pattern: kafka.server<type=ReplicaManager, name=UnderReplicatedPartitions><>Value
+    name: kafka_server_replicamanager_underreplicatedpartitions
+  - pattern: kafka.controller<type=KafkaController, name=ActiveControllerCount><>Value
+    name: kafka_controller_kafkacontroller_activecontrollercount   # changed to match dashboard
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec\w*><>Count
+    name: kafka_server_brokertopicmetrics_messagesin_total
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)PerSec\w*><>Count
+    name: kafka_server_brokertopicmetrics_$1_total
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)PerSec\w*><>OneMinuteRate
+    name: kafka_server_brokertopicmetrics_$1_rate
+  - pattern: kafka.server<type=BrokerTopicMetrics, topic=(.+), name=(BytesInPerSec)><>Count
+    name: kafka_server_brokertopicmetrics_bytesin_total
+    labels:
+      topic: "$1"
+  - pattern: kafka.server<type=BrokerTopicMetrics, topic=(.+), name=(BytesOutPerSec)><>Count
+    name: kafka_server_brokertopicmetrics_bytesout_total
+    labels:
+      topic: "$1"
+  - pattern: kafka.server<type=BrokerTopicMetrics, topic=(.+), name=(MessagesInPerSec)><>Count
+    name: kafka_server_brokertopicmetrics_messagesin_total
+    labels:
+      topic: "$1"
+
+  # --- New rules for missing dashboard metrics ---
+
+  # Controller: offline partitions
+  - pattern: kafka.controller<type=KafkaController, name=OfflinePartitionsCount><>Value
+    name: kafka_controller_kafkacontroller_offlinepartitionscount
+
+  # ZooKeeper session events (disconnects & expires)
+  - pattern: kafka.server<type=SessionExpireListener, name=ZooKeeperDisconnectsPerSec><>Count
+    name: kafka_server_sessionexpirelistener_zookeeperdisconnects_total
+  - pattern: kafka.server<type=SessionExpireListener, name=ZooKeeperExpiresPerSec><>Count
+    name: kafka_server_sessionexpirelistener_zookeeperexpires_total
+
+  # Leader election rate
+  - pattern: kafka.controller<type=ControllerStats, name=LeaderElectionRateAndTimeMs><>Count
+    name: kafka_controller_controllerstats_leaderelectionrateandtimems_count
+
+  # Log flush rate
+  - pattern: kafka.log<type=LogFlushStats, name=LogFlushRateAndTimeMs><>Count
+    name: kafka_log_logflushstats_logflushrateandtimems_count
+
+  # ZooKeeper request latency (summary)
+  - pattern: kafka.server<type=ZooKeeperClientMetrics, name=ZooKeeperRequestLatencyMs><>(?:Count|Sum)
+    name: kafka_server_zookeeperclientmetrics_zookeeperrequestlatencyms
+
+  - pattern: kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+)><>Count
+    name: kafka_network_requestmetrics_requests_total
+    labels:
+      request: "$1"
+      
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>(?:Count|Sum)
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+    
+  
+  - pattern: kafka.server<type=ReplicaManager, name=IsrShrinksPerSec><>Count
+    name: kafka_server_replicamanager_isrshrinks_total
+
+  - pattern: kafka.server<type=ReplicaManager, name=IsrExpandsPerSec><>Count
+    name: kafka_server_replicamanager_isrexpands_total
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>(\d+)(?:th|\.?9th)Percentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.$2"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>50thPercentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.5"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>95thPercentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.95"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>98thPercentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.98"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>99thPercentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.99"
+
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>999thPercentile
+    name: kafka_network_requestmetrics_totaltimems
+    labels:
+      request: "$1"
+      quantile: "0.999"
+
+  - pattern: kafka.server<type=DelayedOperationPurgatory, name=PurgatorySize, delayedOperation=(.+)><>Value
+    name: kafka_server_delayedoperationpurgatory_purgatorysize
+    labels:
+      delayedOperation: "$1"
+
+  - pattern: kafka.network<type=SocketServer, name=NetworkProcessorAvgIdlePercent><>Value
+    name: kafka_network_socketserver_networkprocessoravgidlepercent
+
+  - pattern: kafka.log<type=Log, name=Size, topic=(.+), partition=(.+)><>Value
+    name: kafka_log_log_size
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  - pattern: kafka.server<type=ReplicaManager, name=PartitionCount><>Value
+    name: kafka_server_replicamanager_partitioncount
+
+  - pattern: kafka.server<type=ReplicaManager, name=LeaderCount><>Value
+    name: kafka_server_replicamanager_leadercount

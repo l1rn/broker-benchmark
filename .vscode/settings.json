@@ -1,3 +1,24 @@
 {
-    "makefile.configureOnOpen": true
+  // Enable gopls as the language server
+  "go.useLanguageServer": true,
+  
+  // Automatically format on save
+  "go.formatTool": "goimports",
+  "editor.formatOnSave": true,
+  
+  // Enable autocomplete suggestions
+  "editor.suggestOnTriggerCharacters": true,
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": false
+  },
+  
+  // Go specific settings
+  "go.autocompleteUnimportedPackages": true,
+  "go.gocodePackageLookupMode": "go",
+  "go.inferGopath": true,
+  
+  // Show documentation on hover
+  "editor.hover.enabled": "on"
 }

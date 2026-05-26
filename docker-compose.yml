@@ -22,6 +22,11 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
+    volumes:
+      - ./shared_metrics:/tmp/metrics 
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.textfile.directory=/tmp/metrics'
     ports:
       - "9100:9100"
     networks:

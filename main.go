@@ -9,6 +9,7 @@ import (
 	"broker-benchmark/common"
 	"broker-benchmark/kafka"
 	"broker-benchmark/rabbitmq"
+
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	kafkaPartition := flag.Int("kafka-partition", 0, "Kafka partition")
 	kafkaAcks := flag.Int("kafka-acks", 1, "Kafka required acks(0, 1, -1)")
 	kafkaBatch := flag.Int("kafka-batch", 1, "Kafka batch size")
-
+	
 	metricsTextfile := flag.String("metrics-textfile", "/tmp/benchmark_metrics.prom", "Path to Prometheus textfile")
 	flag.Parse()
 
@@ -103,6 +104,7 @@ func main() {
 	}
 
 	if err != nil {
+		common.ErrorsTotal.WithLabelValues(conf.Broker, "fatal").Inc()
 		log.Fatal(err)
 	}
 

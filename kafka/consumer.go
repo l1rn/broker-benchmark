@@ -38,26 +38,32 @@ func (c *KafkaConsumer) Run(mode string, ready chan struct{}) (*common.Metrics, 
 
 	start := time.Now()
 
-	groupID := fmt.Sprintf("benchmark-%d", time.Now().UnixNano())
 
 	readyOnce := sync.Once{}
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 
-		go func() {
+		go func(workerID int) {
 			defer wg.Done()
 			fmt.Println("RECEIVED MSG")
 			reader := kafka.NewReader(kafka.ReaderConfig{
 				Brokers:   []string{c.conf.Brokers},
 				Topic:     c.conf.KafkaTopic,
-				GroupID:   groupID,
+				Partition:     workerID,
 				MinBytes:  1,
 				MaxBytes:  10e6,
 				QueueCapacity: 1000,
-				ReadLagInterval: -1,
 			})
 			defer reader.Close()
 
+			if err := reader.SetOffset(kafka.LastOffset); err != nil {
+				fmt.Printf("Worker %d failed to set offset: %v\n", workerID, err)
+			}
+			readyOnce.Do(func() {
+				if ready != nil {
+					close(ready)
+				}
+			})
 			for {
 				select {
 				case <-ctx.Done():
@@ -72,11 +78,7 @@ func (c *KafkaConsumer) Run(mode string, ready chan struct{}) (*common.Metrics, 
 					mu.Unlock()
 					continue
 				}
-				readyOnce.Do(func() {
-					if ready != nil {
-						close(ready)
-					}
-				})
+				
 
 				msg := decode(m.Value)
 				if msg.Timestamp == 0 {
@@ -94,9 +96,8 @@ func (c *KafkaConsumer) Run(mode string, ready chan struct{}) (*common.Metrics, 
 				}
 				mu.Unlock()
 
-				_ = reader.CommitMessages(ctx, m)
 			}
-		}()
+		}(i)
 	}
 
 	wg.Wait()

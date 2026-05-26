@@ -5,8 +5,45 @@ import (
 	"os"
 	"sort"
 	"time"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+
+var (
+	MessagesPublished = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "benchmark_messages_published_total",
+			Help: "Total number of messages successfully published",
+		},
+		[]string{"broker"},
+	)
+
+	MessagesConsumed = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "benchmark_messages_consumed_total",
+			Help: "Total number of messages successfully consumed",
+		},
+		[]string{"broker"},
+	)
+
+	MessageLatency = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "benchmark_message_latency_seconds",
+			Help:    "End-to-end latency of messages in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"broker"},
+	)
+
+	ErrorsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "benchmark_errors_total",
+			Help: "Total number of connection or processing errors",
+		},
+		[]string{"broker", "type"},
+	)
+)
 func ComputeMetrics(latencies []time.Duration, total int, duration time.Duration, totalBytes int64) Metrics{
 	m := Metrics {
 		TotalMessages: total,

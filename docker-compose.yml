@@ -50,7 +50,6 @@ services:
       - "29092:29092"
       - "7071:7071"
 
-      - "7071:7071"
     environment:
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_HOSTNAME: localhost
@@ -67,9 +66,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
-      KAFKA_JMX_PORT: 9999
-      KAFKA_JMX_HOSTNAME: localhost
 
       KAFKA_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka.yml"
 

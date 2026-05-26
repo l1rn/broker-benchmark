@@ -92,7 +92,9 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			metrics, err = c.Run("normal")
+			ready := make(chan struct{})
+
+			metrics, err = c.Run("normal", ready)
 		case "e2e":
 			metrics, err = kafka.RunE2E(conf)
 		default:

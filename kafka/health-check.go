@@ -37,3 +37,25 @@ func EnsureTopic(brokers, topic string, numPartitions int) error {
 	}
 	return nil
 }
+
+func DeleteTopic(brokers, topic string) error {
+	conn, err := kafka.Dial("tcp", brokers)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	controller, err := conn.Controller()
+	if err != nil {
+		return err
+	}
+
+	controllerConn, err := kafka.Dial("tcp",
+		net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+	if err != nil {
+		return err
+	}
+	defer controllerConn.Close()
+
+	return controllerConn.DeleteTopics(topic)
+}

@@ -2,7 +2,6 @@ package kafka
 
 import (
 	"sync"
-	"time"
 
 	"broker-benchmark/common"
 )
@@ -24,20 +23,22 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	var prodMetrics, consMetrics *common.Metrics
 	var prodErr, consErr error
 
+	ready := make(chan struct{})
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		consMetrics, consErr = consumer.Run("e2e", ready)
+	}()
+
+	<-ready
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		prodMetrics, prodErr = producer.Run()
 	}()
 
-	time.Sleep(2 * time.Second)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		time.Sleep(500 * time.Millisecond)
-		consMetrics, consErr = consumer.Run("e2e")
-	}()
 	wg.Wait()
 	if prodErr != nil {
 		return nil, prodErr

@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -23,8 +24,8 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequiredAcks(conf.KafkaRequiredAcks),
 		BatchSize:    conf.KafkaBatchSize,
-		BatchTimeout: 1 * time.Millisecond,
-		Async:        false,
+		BatchTimeout: 10 * time.Millisecond,
+		Async:        true,
 		Compression:  kafka.Snappy,
 	}
 
@@ -47,6 +48,8 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 		basePayload[i] = 'B'
 	}
 
+	fmt.Println("Using topic:", p.conf.KafkaTopic)
+
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var latencies []time.Duration
@@ -61,28 +64,34 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 		go func(workerID int) {
 			defer wg.Done()
 			count := msgsPerWorker
+
 			if workerID < rem {
 				count++
 			}
-			messages := make([]kafka.Message, 0, p.conf.KafkaBatchSize)
-			for j := 0; j < total/concurrency; j++ {
-				seq := uint64(workerID*1000000 + len(latencies))
-				payload := make([]byte, msgSize)
-				copy(payload, basePayload)
-
-				messages = append(messages, kafka.Message{
-					Key:   []byte(fmt.Sprintf("%d", seq)),
-					Value: payload,
-					Time:  time.Now(),
-				})
-
-				if len(messages) >= p.conf.KafkaBatchSize {
-					p.sendBatch(messages, &latencies, &errors, &mu)
-					messages = messages[:0]
+			for j := 0; j < count; j++ {
+				msg := common.Message{
+					Timestamp: time.Now().UnixNano(),
+					Payload:   basePayload,
 				}
-			}
-			if len(messages) > 0 {
-				p.sendBatch(messages, &latencies, &errors, &mu)
+
+				startSend := time.Now().UnixNano()
+
+				err := p.writer.WriteMessages(
+					context.Background(),
+					kafka.Message{
+						Key:   []byte(fmt.Sprintf("%d-%d", workerID, j)),
+						Value: encode(msg), 
+					},
+				)
+
+				lat := time.Duration(time.Now().UnixNano() - startSend)
+				mu.Lock()
+				if err != nil {
+					errors++
+				} else {
+					latencies = append(latencies, lat)
+				}
+				mu.Unlock()
 			}
 		}(i)
 	}
@@ -111,4 +120,9 @@ func (p *KafkaProducer) sendBatch(messages []kafka.Message, latencies *[]time.Du
 	for i := 0; i < len(messages); i++ {
 		*latencies = append(*latencies, batchLatency)
 	}
+}
+
+func encode(m common.Message) []byte {
+	b, _ := json.Marshal(m)
+	return b
 }

@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -20,7 +21,7 @@ func NewKafkaConsumer(conf *common.BenchmarkConfig) (*KafkaConsumer, error) {
 }
 
 
-func (c *KafkaConsumer) Run(mode string) (*common.Metrics, error) {
+func (c *KafkaConsumer) Run(mode string, ready chan struct{}) (*common.Metrics, error) {
 	total := c.conf.MessageCount
 	concurrency := c.conf.Consumers
 	msgSize := c.conf.MessageSize
@@ -28,97 +29,89 @@ func (c *KafkaConsumer) Run(mode string) (*common.Metrics, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if total == 0 {
-		cancel()
-	}
-
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	var received, errors int
+	var received int
+	var errors int
 	var latencies []time.Duration
 
 	start := time.Now()
-	groupID := fmt.Sprintf("benchmark-group-%d", time.Now().UnixNano())
 
-	var startOffset int64
+	groupID := fmt.Sprintf("benchmark-%d", time.Now().UnixNano())
 
-	if mode == "e2e" {
-		startOffset = kafka.FirstOffset
-	} else {
-		startOffset = kafka.LastOffset
-	}
-
+	readyOnce := sync.Once{}
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		go func(workerID int) {
+
+		go func() {
 			defer wg.Done()
+			fmt.Println("RECEIVED MSG")
 			reader := kafka.NewReader(kafka.ReaderConfig{
-				Brokers:        []string{c.conf.Brokers},
-				Topic:          c.conf.KafkaTopic,
-				GroupID: 		groupID,
-				Partition:      c.conf.KafkaPartition,
-				MinBytes:       1,
-				MaxBytes:       10 * 1024 * 1024,
-				MaxWait: 100 * time.Millisecond,
-				StartOffset:    startOffset,
+				Brokers:   []string{c.conf.Brokers},
+				Topic:     c.conf.KafkaTopic,
+				GroupID:   groupID,
+				MinBytes:  1,
+				MaxBytes:  10e6,
+				QueueCapacity: 1000,
+				ReadLagInterval: -1,
 			})
 			defer reader.Close()
 
 			for {
 				select {
-					case <-ctx.Done():
-						return
-					default:
+				case <-ctx.Done():
+					return
+				default:
 				}
-				msg, err := reader.FetchMessage(context.Background())
+
+				m, err := reader.FetchMessage(ctx)
 				if err != nil {
 					mu.Lock()
 					errors++
 					mu.Unlock()
 					continue
 				}
+				readyOnce.Do(func() {
+					if ready != nil {
+						close(ready)
+					}
+				})
 
-				if !msg.Time.IsZero(){
-					latency := time.Since(msg.Time)
-					mu.Lock()
-					latencies = append(latencies, latency)
-					mu.Unlock()
-				}
-
-				if err := reader.CommitMessages(context.Background(), msg); err != nil {
-					mu.Lock()
-					errors++
-					mu.Unlock()
+				msg := decode(m.Value)
+				if msg.Timestamp == 0 {
 					continue
 				}
 
+				latency := time.Since(time.Unix(0, msg.Timestamp))
+
 				mu.Lock()
-				if received >= total {
-					mu.Unlock()
-					return
-				}
+				latencies = append(latencies, latency)
 				received++
-				count := received
+
+				if received >= total {
+					cancel()
+				}
 				mu.Unlock()
 
-				if count >= total {
-					cancel()
-					break
-				}
+				_ = reader.CommitMessages(ctx, m)
 			}
-		}(i)
+		}()
 	}
-	wg.Wait()
-	duration := time.Since(start)
 
-	successful := received - errors
-	if successful < 0 {
-		successful = 0
-	}
-	totalBytes := int64(successful) * int64(msgSize)
-	metrics := common.ComputeMetrics(latencies, successful, duration, totalBytes)
-	metrics.Errors = int(errors)
+	wg.Wait()
+
+	duration := time.Since(start)
+	totalBytes := int64(received) * int64(msgSize)
+
+	metrics := common.ComputeMetrics(latencies, received, duration, totalBytes)
+	metrics.Errors = errors
 
 	return &metrics, nil
+}
+
+func decode(b []byte) common.Message {
+	var m common.Message
+	_ = json.Unmarshal(b, &m)
+	return m
 }

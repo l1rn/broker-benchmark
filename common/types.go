@@ -31,7 +31,6 @@ type Metrics struct {
 }
 
 type Message struct {
-	Seq uint64
-	Timestamp time.Time
-	Payload []byte
+    Timestamp int64  `json:"timestamp"`
+    Payload   []byte `json:"payload"`
 }

@@ -15,7 +15,7 @@ func main() {
 	broker := flag.String("broker", "rabbitmq", "Broker type: rabbitmq or kafka")
 	mode := flag.String("mode", "producer", "Mode: producer, consumer, e2e")
 	msgCount := flag.Int("count", 10000, "Number of messages")
-	msgSize := flag.Int("size", 102400, "Message size in bytes")
+	msgSize := flag.Int("size", 10240, "Message size in bytes")
 	producers := flag.Int("producers", 1, "Number of concurrent producers")
 	consumers := flag.Int("consumers", 1, "Number of concurrent consumers")
 	queueTopic := flag.String("queue", "benchmark_queue", "Queue/Topic name")

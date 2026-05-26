@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"time"
@@ -22,11 +22,10 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Addr:         kafka.TCP(conf.Brokers),
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequiredAcks(conf.KafkaRequiredAcks),
+		RequiredAcks: kafka.RequireOne,
 		BatchSize:    conf.KafkaBatchSize,
-		BatchTimeout: 10 * time.Millisecond,
-		Async:        true,
-		Compression:  kafka.Snappy,
+		BatchTimeout: 0,
+		Async:        false,
 	}
 
 	return &KafkaProducer{
@@ -69,22 +68,23 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 				count++
 			}
 			for j := 0; j < count; j++ {
-				msg := common.Message{
-					Timestamp: time.Now().UnixNano(),
-					Payload:   basePayload,
-				}
+				buf := make([]byte, 8+len(basePayload))
 
-				startSend := time.Now().UnixNano()
+				ts := time.Now().UnixNano()
+
+				binary.BigEndian.PutUint64(buf[:8], uint64(ts))
+				copy(buf[8:], basePayload)
+				startSend := time.Now()
 
 				err := p.writer.WriteMessages(
 					context.Background(),
 					kafka.Message{
 						Key:   []byte(fmt.Sprintf("%d-%d", workerID, j)),
-						Value: encode(msg), 
+						Value: buf, 
 					},
 				)
 
-				lat := time.Duration(time.Now().UnixNano() - startSend)
+				lat := time.Since(startSend)				
 				mu.Lock()
 				if err != nil {
 					errors++
@@ -120,9 +120,4 @@ func (p *KafkaProducer) sendBatch(messages []kafka.Message, latencies *[]time.Du
 	for i := 0; i < len(messages); i++ {
 		*latencies = append(*latencies, batchLatency)
 	}
-}
-
-func encode(m common.Message) []byte {
-	b, _ := json.Marshal(m)
-	return b
 }

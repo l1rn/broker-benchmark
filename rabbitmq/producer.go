@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"sync"
@@ -126,9 +127,12 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 			confirms := ch.NotifyPublish(confirmCh)
 
 			for range work {
-				ts := time.Now()
-				payload := make([]byte, msgSize)
-				copy(payload, basePayload)
+				buf := make([]byte, 8+msgSize)
+				ts := time.Now().UnixNano()
+				binary.BigEndian.PutUint64(buf[:8], uint64(ts))
+				copy(buf[8:], basePayload)
+				
+				startSend := time.Now()
 
 				err := ch.Publish(
 					"",
@@ -136,9 +140,9 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 					false,
 					false,
 					amqp.Publishing{
-						ContentType: "text/plain",
-						Body:        payload,
-						Timestamp:   ts,
+						DeliveryMode: amqp.Persistent,
+						ContentType: "application/octet-stream",
+						Body:        buf,
 					},
 				)
 
@@ -151,7 +155,7 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 				}
 
 				confirm := <-confirms
-				latency := time.Since(ts)
+				latency := time.Since(startSend)
 
 				mu.Lock()
 				if confirm.Ack {

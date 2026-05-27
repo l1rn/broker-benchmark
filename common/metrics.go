@@ -5,6 +5,7 @@ import (
 	"os"
 	"sort"
 	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -85,7 +86,7 @@ func (m Metrics) Print(title string) {
 	}
 }
 
-func WriteMetricsTextfile(path string, m Metrics, broker string) error {
+func WriteMetricsTextfile(path string, m Metrics, broker string, mode string, startTime int64) error {
 	tmpPath := path + ".tmp"
 	f, err := os.Create(tmpPath)
 	if err != nil {
@@ -93,34 +94,38 @@ func WriteMetricsTextfile(path string, m Metrics, broker string) error {
 	}
 	defer f.Close()
 
+	fmt.Fprintf(f, "# HELP benchmark_start_time_seconds Unix timestamp of when the benchmark started.\n")
+	fmt.Fprintf(f, "# TYPE benchmark_start_time_seconds gauge\n")
+	fmt.Fprintf(f, "benchmark_start_time_seconds{broker=\"%s\",mode=\"%s\"} %d\n", broker, mode, startTime)
+
 	fmt.Fprintf(f, "# HELP benchmark_total_messages Total messages processed.\n")
 	fmt.Fprintf(f, "# TYPE benchmark_total_messages gauge\n")
-	fmt.Fprintf(f, "benchmark_total_messages{broker=\"%s\"} %d\n", broker, m.TotalMessages)
+	fmt.Fprintf(f, "benchmark_total_messages{broker=\"%s\",mode=\"%s\"} %d\n", broker, mode, m.TotalMessages)
 
 	fmt.Fprintf(f, "# HELP benchmark_duration_seconds Benchmark duration.\n")
 	fmt.Fprintf(f, "# TYPE benchmark_duration_seconds gauge\n")
-	fmt.Fprintf(f, "benchmark_duration_seconds{broker=\"%s\"} %f\n", broker, m.Duration.Seconds())
+	fmt.Fprintf(f, "benchmark_duration_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.Duration.Seconds())
 
 	fmt.Fprintf(f, "# HELP benchmark_throughput_msg_per_sec Messages per second.\n")
 	fmt.Fprintf(f, "# TYPE benchmark_throughput_msg_per_sec gauge\n")
-	fmt.Fprintf(f, "benchmark_throughput_msg_per_sec{broker=\"%s\"} %.2f\n", broker, m.ThroughputMsgPS)
+	fmt.Fprintf(f, "benchmark_throughput_msg_per_sec{broker=\"%s\",mode=\"%s\"} %.2f\n", broker, mode, m.ThroughputMsgPS)
 
 	fmt.Fprintf(f, "# HELP benchmark_throughput_mb_per_sec MB per second.\n")
 	fmt.Fprintf(f, "# TYPE benchmark_throughput_mb_per_sec gauge\n")
-	fmt.Fprintf(f, "benchmark_throughput_mb_per_sec{broker=\"%s\"} %.2f\n", broker, m.ThroughputMBPS)
+	fmt.Fprintf(f, "benchmark_throughput_mb_per_sec{broker=\"%s\",mode=\"%s\"} %.2f\n", broker, mode, m.ThroughputMBPS)
 
 	if len(m.Latencies) > 0 {
 		fmt.Fprintf(f, "# HELP benchmark_latency_p50_seconds 50th percentile latency.\n")
 		fmt.Fprintf(f, "# TYPE benchmark_latency_p50_seconds gauge\n")
-		fmt.Fprintf(f, "benchmark_latency_p50_seconds{broker=\"%s\"} %f\n", broker, m.P50.Seconds())
+		fmt.Fprintf(f, "benchmark_latency_p50_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P50.Seconds())
 
 		fmt.Fprintf(f, "# HELP benchmark_latency_p95_seconds 95th percentile latency.\n")
 		fmt.Fprintf(f, "# TYPE benchmark_latency_p95_seconds gauge\n")
-		fmt.Fprintf(f, "benchmark_latency_p95_seconds{broker=\"%s\"} %f\n", broker, m.P95.Seconds())
+		fmt.Fprintf(f, "benchmark_latency_p95_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P95.Seconds())
 
 		fmt.Fprintf(f, "# HELP benchmark_latency_p99_seconds 99th percentile latency.\n")
 		fmt.Fprintf(f, "# TYPE benchmark_latency_p99_seconds gauge\n")
-		fmt.Fprintf(f, "benchmark_latency_p99_seconds{broker=\"%s\"} %f\n", broker, m.P99.Seconds())
+		fmt.Fprintf(f, "benchmark_latency_p99_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P99.Seconds())
 	}
 
 	if err := os.Rename(tmpPath, path); err != nil {

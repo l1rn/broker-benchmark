@@ -23,8 +23,8 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequireOne,
-		BatchSize:    conf.KafkaBatchSize,
-		BatchTimeout: 0,
+		BatchSize:    1000,
+		BatchTimeout: 10,
 		Async:        false,
 	}
 

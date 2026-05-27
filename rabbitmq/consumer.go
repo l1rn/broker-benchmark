@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"sync"
@@ -37,7 +38,7 @@ func (c *RabbitConsumer) Close() {
 	}
 }
 
-func (c *RabbitConsumer) Run() (*common.Metrics, error) {
+func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 	
 	total := c.conf.MessageCount
 	concurrency := c.conf.Consumers
@@ -56,13 +57,14 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 
 	start := time.Now()
 	
-
+	readyOnce := sync.Once{}
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
 
 			ch, err := c.conn.Channel()
+			err = ch.Qos(1000, 0, false)
 			if err != nil {
 				log.Printf("Worker: %d: failed to open channel: %v", workerID, err)
 				mu.Lock()
@@ -75,7 +77,7 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 			deliveries, err := ch.Consume(
 				c.queue,
 				fmt.Sprintf("consumer-%d", workerID),
-				false, false, false, false, nil,
+				true, false, false, false, nil,
 			)
 
 			if err != nil {
@@ -85,30 +87,25 @@ func (c *RabbitConsumer) Run() (*common.Metrics, error) {
 				mu.Unlock()
 				return
 			}
-
+			readyOnce.Do(func() {
+                if ready != nil {
+                    close(ready)
+                }
+            })
 			for {
 				select {
 				case d, ok := <-deliveries:
-					if !ok {
-						return
-					}
-
+					if !ok { return }
 					recvTime := time.Now()
-					if !d.Timestamp.IsZero() {
-						latency := recvTime.Sub(d.Timestamp)
-						mu.Lock()
-						latencies = append(latencies, latency)
-						mu.Unlock()
-					}
-
-					if err := d.Ack(false); err != nil {
-						mu.Lock()
-						errors++
-						mu.Unlock()
-						continue
-					}
+					if len(d.Body) < 8 {
+                        continue
+                    }
+					ts := int64(binary.BigEndian.Uint64(d.Body[:8]))
+					latency := recvTime.Sub(time.Unix(0, ts))
 
 					mu.Lock()
+					latencies = append(latencies, latency)
+
 					received++
 					if received >= total {
 						cancel()

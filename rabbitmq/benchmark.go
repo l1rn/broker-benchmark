@@ -1,7 +1,7 @@
 package rabbitmq
 
 import (
-	"time"
+	"sync"
 
 	"broker-benchmark/common"
 )
@@ -20,34 +20,45 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	}
 
 	defer consumer.Close()
-
+	
+	var wg sync.WaitGroup
 	var prodMetrics, consMetrics *common.Metrics
 	var prodErr, consErr error
 
 	consumerReady := make(chan struct{})
-	consumerDone := make(chan struct{})
-	start := time.Now()
+
+	wg.Add(1)
 	go func() {
-		consumerReady <- struct{}{}
-		consMetrics, consErr = consumer.Run()
-		close(consumerDone)
+		defer wg.Done()
+		consMetrics, consErr = consumer.Run(consumerReady)
 	}()
 
 	<-consumerReady
-
-	prodMetrics, prodErr = producer.Run()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		prodMetrics, prodErr = producer.Run()
+	}()
 	
+	wg.Wait()
 	if prodErr != nil {
 		return nil, prodErr
 	}
-	<-consumerDone
+
 	if consErr != nil {
 		return nil, consErr
 	}
 
-	e2eDuration := time.Since(start)
-	totalBytes := int64(prodMetrics.TotalMessages) * int64(conf.MessageSize)
-	metrics := common.ComputeMetrics(consMetrics.Latencies, consMetrics.TotalMessages, e2eDuration, totalBytes)
-	metrics.Errors = prodMetrics.Errors + consMetrics.Errors
-	return &metrics, nil
+	combined := &common.Metrics{
+        TotalMessages:   consMetrics.TotalMessages,
+        Duration:        prodMetrics.Duration,
+        ThroughputMsgPS: consMetrics.ThroughputMsgPS,
+        ThroughputMBPS:  consMetrics.ThroughputMBPS,
+        Latencies:       consMetrics.Latencies,
+        P50:             consMetrics.P50,
+        P95:             consMetrics.P95,
+        P99:             consMetrics.P99,
+        Errors:          prodMetrics.Errors + consMetrics.Errors,
+    }
+	return combined, nil
 }

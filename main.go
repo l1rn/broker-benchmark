@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,6 +21,7 @@ type sessionState int
 
 const (
 	stateSelectBroker sessionState = iota
+	stateSelectMode
 	stateRunning
 	stateCompleted
 )
@@ -32,6 +36,7 @@ type model struct {
 	choices      []string
 	cursor       int
 	chosenBroker string
+	chosenMode string
 	metrics      *common.Metrics
 	err          error
 	startTime    int64
@@ -41,7 +46,7 @@ type model struct {
 
 func main() {
 	broker := flag.String("broker", "", "Broker type: rabbitmq or kafka")
-	mode := flag.String("mode", "producer", "Mode: producer, consumer, e2e")
+	mode := flag.String("mode", "", "Mode: producer, consumer, e2e")
 	msgCount := flag.Int("count", 10000, "Number of messages")
 	msgSize := flag.Int("size", 1024, "Message size in bytes")
 	producers := flag.Int("producers", 1, "Number of concurrent producers")
@@ -71,18 +76,27 @@ func main() {
 		KafkaPartition:    *kafkaPartition,
 		KafkaRequiredAcks: *kafkaAcks,
 		KafkaBatchSize:    *kafkaBatch,
+		MetricsFilePath:   *metricsTextfile,
 	}
 
 	initialModel := model{
 		state:        stateSelectBroker,
-		choices:      []string{"rabbitmq 🐇", "kafka 🦅"},
 		cursor:       0,
+		choices:      []string{"rabbitmq 🐇", "kafka 🦅"},
 		flagConfig:   conf,
 		textfilePath: *metricsTextfile,
 	}
 
 	if *broker != "" {
 		initialModel.chosenBroker = strings.ToLower(*broker)
+		initialModel.choices = []string{"e2e", "consumer", "producer"}
+	}
+
+	if *mode != "" {
+		initialModel.chosenMode = strings.ToLower(*mode)
+	}
+
+	if initialModel.chosenBroker != "" && initialModel.chosenMode != "" {
 		initialModel.state = stateRunning
 	}
 
@@ -94,8 +108,9 @@ func main() {
 
 func (m model) Init() tea.Cmd {
 	if m.state == stateRunning{
-		return m.runBenchmarkCmd()
+		return runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())	
 	}
+	
 	return nil
 }
 
@@ -121,8 +136,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else {
 					m.chosenBroker = "kafka"
 				}
-				return m, m.runBenchmarkCmd()
+				m.state = stateSelectMode
+				m.choices = []string{"consumer", "producer", "e2e"}
+				m.cursor = 0
+				return m, nil
 			}
+			if m.state == stateSelectMode {
+				m.state = stateRunning
+				if m.cursor == 0 {
+					m.chosenMode = "e2e" 
+				} else if m.cursor == 1 {
+					m.chosenMode = "consumer"
+				} else {
+					m.chosenMode = "producer" 
+				}
+				m.state = stateRunning 
+				return m, runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())			}
 		}
 	case benchmarkFinishedMsg:
 		m.state = stateCompleted
@@ -143,14 +172,12 @@ func (m model) View() string {
 	switch m.state {
 	case stateSelectBroker:
 		s.WriteString("Select which middleware engine to test:\n\n")
-		for i, choice := range m.choices {
-			cursor := " "
-			if m.cursor == i {
-				cursor = "👉"
-			}
-			s.WriteString(fmt.Sprintf("%s %s\n", cursor, choice))
-		}
-		s.WriteString("\n(Press up/down to move, enter to select, q to quit)\n")
+		m.generateOutput(&s)
+
+	case stateSelectMode:
+		s.WriteString("Select which mode to use for tests:\n\n")
+		slices.Reverse(m.choices)
+		m.generateOutput(&s)
 
 	case stateRunning:
 		s.WriteString(fmt.Sprintf("Running %s Benchmark in Mode [%s]...\n", strings.ToUpper(m.chosenBroker), strings.ToUpper(m.flagConfig.Mode)))
@@ -167,56 +194,83 @@ func (m model) View() string {
 	return s.String()
 }
 
-func (m *model) runBenchmarkCmd() tea.Cmd {
+func runBenchmarkCmd(conf *common.BenchmarkConfig, broker, mode string, textfilePath string, startTime int64) tea.Cmd {
 	return func () tea.Msg  {
-		m.startTime = time.Now().Unix()
-		m.flagConfig.Broker = m.chosenBroker
+		conf.Broker = broker
+		conf.Mode = mode
 		var metrics *common.Metrics
 		var err error
-		switch m.flagConfig.Broker {
-			case "rabbitmq":
-			switch m.flagConfig.Mode {
+		switch conf.Broker {
+		case "rabbitmq":
+			switch conf.Mode {
 			case "producer":
-				p, e := rabbitmq.NewRabbitProducer(m.flagConfig)
-				if e != nil {
+				p, e := rabbitmq.NewRabbitProducer(conf)
+				if e == nil {
 					defer p.Close()
 					metrics, err = p.Run()
-				} else { err = e}
+				} else {
+					err = e
+				}
 			case "consumer":
-				c, e := rabbitmq.NewRabbitConsumer(m.flagConfig)
-				if e != nil {
+				c, e := rabbitmq.NewRabbitConsumer(conf)
+				if e == nil {
 					defer c.Close()
 					ready := make(chan struct{})
 					metrics, err = c.Run(ready)
-				} else { err = e }
+				} else {
+					err = e
+				}
 			case "e2e":
-				metrics, err = rabbitmq.RunE2E(m.flagConfig)
+				metrics, err = rabbitmq.RunE2E(conf)
 			}
 		case "kafka":
-			if err = kafka.EnsureTopic(m.flagConfig.Brokers, m.flagConfig.KafkaTopic, m.flagConfig.Consumers); err != nil {
-				switch m.flagConfig.Mode {
+			if err = kafka.EnsureTopic(conf.Brokers, conf.KafkaTopic, conf.Consumers); err == nil {
+				switch conf.Mode {
 				case "producer":
-					p, e := kafka.NewKafkaProducer(m.flagConfig)
-					if e != nil {
+					p, e := kafka.NewKafkaProducer(conf)
+					if e == nil {
 						defer p.Close()
 						metrics, err = p.Run()
-					} else { err = e }
+					} else {
+						err = e
+					}
 				case "consumer":
-					c, e := kafka.NewKafkaConsumer(m.flagConfig)
-					if err != nil {
+					c, e := kafka.NewKafkaConsumer(conf)
+					if e == nil {
 						ready := make(chan struct{})
 						metrics, err = c.Run("normal", ready)
-					} else { err = e }
+					} else {
+						err = e
+					}
 				case "e2e":
-					metrics, err = kafka.RunE2E(m.flagConfig)
-				}	
+					metrics, err = kafka.RunE2E(conf)
+				}
 			}
 		}
-		
-		if err == nil && m.textfilePath != "" {
-			_ = common.WriteMetricsTextfile(m.textfilePath, *metrics, m.chosenBroker, m.flagConfig.Mode, m.startTime);
+
+		if err == nil { 
+			targetPath := textfilePath 
+			if targetPath == "" {
+				targetPath = filepath.Join("shared_metrics", fmt.Sprintf("%s-%s.prom", broker, mode))
+			}
+
+			dir := filepath.Dir(targetPath)
+			if errDir := os.MkdirAll(dir, 0755); errDir == nil {
+				_ = common.WriteMetricsTextfile(targetPath, *metrics, broker, mode, startTime)
+			}
 		}
 
 		return benchmarkFinishedMsg{metrics: metrics, err: err}
 	}
+}
+
+func (m model) generateOutput(s *strings.Builder) {
+	for i, choice := range m.choices {
+		cursor := " "
+		if m.cursor == i {
+			cursor = "👉"
+		}
+		s.WriteString(fmt.Sprintf("%s %s\n", cursor, choice))
+	}
+	s.WriteString("\n(Press up/down to move, enter to select, q to quit)\n")
 }

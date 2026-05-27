@@ -1,21 +1,40 @@
+# HELP benchmark_start_time_seconds Unix timestamp of when the benchmark started.
+# TYPE benchmark_start_time_seconds gauge
+benchmark_start_time_seconds{broker="rabbitmq",mode="producer"} 1779904571
 # HELP benchmark_total_messages Total messages processed.
 # TYPE benchmark_total_messages gauge
 benchmark_total_messages{broker="rabbitmq",mode="producer"} 10000
 # HELP benchmark_duration_seconds Benchmark duration.
 # TYPE benchmark_duration_seconds gauge
-benchmark_duration_seconds{broker="rabbitmq",mode="producer"} 1.474271
+benchmark_duration_seconds{broker="rabbitmq",mode="producer"} 7.971056
 # HELP benchmark_throughput_msg_per_sec Messages per second.
 # TYPE benchmark_throughput_msg_per_sec gauge
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer"} 6783.01
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer"} 1254.54
 # HELP benchmark_throughput_mb_per_sec MB per second.
 # TYPE benchmark_throughput_mb_per_sec gauge
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer"} 6.62
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer"} 1.23
 # HELP benchmark_latency_p50_seconds 50th percentile latency.
 # TYPE benchmark_latency_p50_seconds gauge
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer"} 0.000141
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer"} 0.000778
 # HELP benchmark_latency_p95_seconds 95th percentile latency.
 # TYPE benchmark_latency_p95_seconds gauge
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer"} 0.000185
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer"} 0.000918
 # HELP benchmark_latency_p99_seconds 99th percentile latency.
 # TYPE benchmark_latency_p99_seconds gauge
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer"} 0.000279
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer"} 0.001080
+benchmark_start_time_seconds{broker="rabbitmq",mode="producer",start_time="1779905203"} 1779905203
+benchmark_total_messages{broker="rabbitmq",mode="producer",start_time="1779905203"} 10000
+benchmark_duration_seconds{broker="rabbitmq",mode="producer",start_time="1779905203"} 8.829159
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer",start_time="1779905203"} 1132.61
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer",start_time="1779905203"} 1.11
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer",start_time="1779905203"} 0.000820
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer",start_time="1779905203"} 0.001226
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer",start_time="1779905203"} 0.001606
+benchmark_start_time_seconds{broker="rabbitmq",mode="producer",start_time="1779905223"} 1779905223
+benchmark_total_messages{broker="rabbitmq",mode="producer",start_time="1779905223"} 10000
+benchmark_duration_seconds{broker="rabbitmq",mode="producer",start_time="1779905223"} 8.565806
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer",start_time="1779905223"} 1167.43
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer",start_time="1779905223"} 1.14
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer",start_time="1779905223"} 0.000817
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer",start_time="1779905223"} 0.001089
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer",start_time="1779905223"} 0.001376

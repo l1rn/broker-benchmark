@@ -16,6 +16,7 @@ type BenchmarkConfig struct {
 	KafkaPartition int
 	KafkaRequiredAcks int
 	KafkaBatchSize int
+	MetricsFilePath string
 }
 
 type Metrics struct {

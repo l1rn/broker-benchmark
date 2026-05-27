@@ -214,7 +214,16 @@ func (m *model) runBenchmarkCmd() tea.Cmd {
 		}
 		
 		if err == nil && m.textfilePath != "" {
-			_ = common.WriteMetricsTextfile(m.textfilePath, *metrics, m.chosenBroker, m.flagConfig.Mode, m.startTime);
+			finalPath := m.textfilePath
+			if finalPath == "" {
+                outputDir := "shared_metrics"
+                
+                finalPath = fmt.Sprintf("./%s/%s-%s.prom", outputDir, m.chosenBroker, m.flagConfig.Mode)
+            }
+			fmt.Printf("path: %s | %s\n", finalPath, m.textfilePath)
+			if writeErr := common.WriteMetricsTextfile(finalPath, *metrics, m.chosenBroker, m.flagConfig.Mode, m.startTime); writeErr != nil {
+                return benchmarkFinishedMsg{metrics: metrics, err: fmt.Errorf("failed to write metrics: %w", writeErr)}
+            }		
 		}
 
 		return benchmarkFinishedMsg{metrics: metrics, err: err}

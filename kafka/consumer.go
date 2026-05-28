@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -15,6 +16,8 @@ import (
 
 	type KafkaConsumer struct {
 		conf   *common.BenchmarkConfig
+		LiveReceived atomic.Uint64
+		LiveErrors atomic.Uint64
 	}
 
 	func NewKafkaConsumer(conf *common.BenchmarkConfig) (*KafkaConsumer, error) {
@@ -33,8 +36,6 @@ import (
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 
-		var received int
-		var errors int
 		var latencies []time.Duration
 
 		start := time.Now()
@@ -74,9 +75,7 @@ import (
 
 					m, err := reader.FetchMessage(ctx)
 					if err != nil {
-						mu.Lock()
-						errors++
-						mu.Unlock()
+						c.LiveErrors.Add(1)
 						continue
 					}
 					
@@ -90,12 +89,12 @@ import (
 
 					mu.Lock()
 					latencies = append(latencies, latency)
-					received++
+					mu.Unlock()
 
-					if received >= total {
+					currentReceived := c.LiveReceived.Add(1)
+					if currentReceived >= uint64(total-1) {
 						cancel()
 					}
-					mu.Unlock()
 
 				}
 			}(i)
@@ -104,10 +103,14 @@ import (
 		wg.Wait()
 
 		duration := time.Since(start)
-		totalBytes := int64(received) * int64(msgSize)
+		finalSuccessful := c.LiveReceived.Load()
+		finalErrors := c.LiveErrors.Load()
+		
+		totalBytes := int64(finalSuccessful) * int64(msgSize)
 
-		metrics := common.ComputeMetrics(latencies, received, duration, totalBytes)
-		metrics.Errors = errors
+		metrics := common.ComputeMetrics(latencies, int(finalSuccessful) - int(finalErrors), duration, totalBytes)
+		metrics.Errors = int(finalErrors)
+		metrics.TotalMessages = int(finalSuccessful)
 
 		return &metrics, nil
 	}

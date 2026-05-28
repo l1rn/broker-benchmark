@@ -1,7 +1,11 @@
 package rabbitmq
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
+	"time"
 
 	"broker-benchmark/common"
 )
@@ -27,6 +31,43 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 
 	consumerReady := make(chan struct{})
 
+	targetPath := conf.MetricsFilePath
+	metricName := fmt.Sprintf("%s-%s.prom", conf.Broker, conf.Mode)
+	if targetPath == "" {
+		targetPath = filepath.Join("shared_metrics", metricName)
+	}
+
+	_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+
+	benchmarkStartTime := time.Now()
+	ticker := time.NewTicker(5 * time.Second)
+	done := make(chan bool)
+	
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				currentReceived := consumer.LiveReceived.Load()
+				elapsed := time.Since(benchmarkStartTime).Seconds()
+				if elapsed <= 0 { elapsed = 1 } 
+
+				throughputMsgPS := float64(currentReceived) / elapsed
+				throughputMBPS := (throughputMsgPS * float64(conf.MessageSize)) / (1024 * 1024)
+
+				liveMetrics := common.Metrics {
+					TotalMessages:   int(currentReceived),
+					ThroughputMsgPS: throughputMsgPS,
+					ThroughputMBPS:  throughputMBPS,
+					Duration:        time.Since(benchmarkStartTime),
+				}
+
+				_ = common.WriteMetricsTextfile(targetPath, liveMetrics, conf.Broker, conf.Mode, benchmarkStartTime.Unix())
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -41,13 +82,12 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	}()
 	
 	wg.Wait()
-	if prodErr != nil {
-		return nil, prodErr
-	}
+	ticker.Stop()
+	done <- true
 
-	if consErr != nil {
-		return nil, consErr
-	}
+	if prodErr != nil { return nil, prodErr }
+
+	if consErr != nil { return nil, consErr }
 
 	combined := &common.Metrics{
         TotalMessages:   consMetrics.TotalMessages,

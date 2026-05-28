@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -15,6 +16,8 @@ import (
 type KafkaProducer struct {
 	writer *kafka.Writer
 	conf   *common.BenchmarkConfig
+	LiveSent atomic.Uint64
+	LiveErrors atomic.Uint64
 }
 
 func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
@@ -52,7 +55,6 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var latencies []time.Duration
-	var errors int64
 	start := time.Now()
 
 	msgsPerWorker := total / concurrency
@@ -85,21 +87,27 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 				)
 
 				lat := time.Since(startSend)				
-				mu.Lock()
 				if err != nil {
-					errors++
+					p.LiveErrors.Add(1)
 				} else {
+					p.LiveSent.Add(1)
+					mu.Lock()
 					latencies = append(latencies, lat)
+					mu.Unlock()
 				}
-				mu.Unlock()
 			}
 		}(i)
 	}
 	wg.Wait()
 	duration := time.Since(start)
 	totalBytes := int64(total) * int64(msgSize)
-	metrics := common.ComputeMetrics(latencies, total-int(errors), duration, totalBytes)
-	metrics.Errors = int(errors)
+	finalSuccessful := p.LiveSent.Load()
+	finalErrors := p.LiveErrors.Load()
+	
+	metrics := common.ComputeMetrics(latencies, int(finalSuccessful-finalErrors), duration, totalBytes)
+	
+	metrics.Errors = int(finalErrors)
+	metrics.TotalMessages = int(finalSuccessful)
 	return &metrics, nil
 }
 

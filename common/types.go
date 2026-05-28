@@ -1,6 +1,9 @@
 package common
 
-import "time"
+import (
+	"sync/atomic"
+	"time"
+)
 
 type BenchmarkConfig struct {
 	Broker string
@@ -17,6 +20,18 @@ type BenchmarkConfig struct {
 	KafkaRequiredAcks int
 	KafkaBatchSize int
 	MetricsFilePath string
+}
+
+type ActiveMetrics struct {
+	MessagesProcessed atomic.Uint64
+	Duration time.Duration
+	ThroughputMsgPS float64
+	ThroughputMBPS float64
+	Latencies []time.Duration
+	P50 time.Duration
+	P95 time.Duration
+	P99 time.Duration
+	Errors atomic.Int64
 }
 
 type Metrics struct {

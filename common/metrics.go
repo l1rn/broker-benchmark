@@ -90,7 +90,7 @@ func WriteMetricsTextfile(path string, m Metrics, broker string, mode string, st
 	_, statErr := os.Stat(path)
 	isNewFile := os.IsNotExist(statErr)
 	
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -117,17 +117,18 @@ func WriteMetricsTextfile(path string, m Metrics, broker string, mode string, st
 		}
 	}
 
-	fmt.Fprintf(f, "benchmark_start_time_seconds{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %d\n", broker, mode, startTime, startTime)
-	fmt.Fprintf(f, "benchmark_total_messages{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %d\n", broker, mode, startTime, m.TotalMessages)
-	fmt.Fprintf(f, "benchmark_duration_seconds{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %f\n", broker, mode, startTime, m.Duration.Seconds())
-	fmt.Fprintf(f, "benchmark_throughput_msg_per_sec{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %.2f\n", broker, mode, startTime, m.ThroughputMsgPS)
-	fmt.Fprintf(f, "benchmark_throughput_mb_per_sec{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %.2f\n", broker, mode, startTime, m.ThroughputMBPS)
-
-	if len(m.Latencies) > 0 {
-		fmt.Fprintf(f, "benchmark_latency_p50_seconds{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %f\n", broker, mode, startTime, m.P50.Seconds())
-		fmt.Fprintf(f, "benchmark_latency_p95_seconds{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %f\n", broker, mode, startTime, m.P95.Seconds())
-		fmt.Fprintf(f, "benchmark_latency_p99_seconds{broker=\"%s\",mode=\"%s\",start_time=\"%d\"} %f\n", broker, mode, startTime, m.P99.Seconds())
-	}
+	startTime = int64(time.Now().Unix())
+    fmt.Fprintf(f, "benchmark_start_time_seconds{broker=\"%s\",mode=\"%s\"} %d\n", broker, mode, startTime)
+    fmt.Fprintf(f, "benchmark_total_messages{broker=\"%s\",mode=\"%s\"} %d\n", broker, mode, m.TotalMessages)
+    fmt.Fprintf(f, "benchmark_duration_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.Duration.Seconds())
+    fmt.Fprintf(f, "benchmark_throughput_msg_per_sec{broker=\"%s\",mode=\"%s\"} %.2f\n", broker, mode, m.ThroughputMsgPS)
+    fmt.Fprintf(f, "benchmark_throughput_mb_per_sec{broker=\"%s\",mode=\"%s\"} %.2f\n", broker, mode, m.ThroughputMBPS)
+    
+    if len(m.Latencies) > 0 {
+        fmt.Fprintf(f, "benchmark_latency_p50_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P50.Seconds())
+        fmt.Fprintf(f, "benchmark_latency_p95_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P95.Seconds())
+        fmt.Fprintf(f, "benchmark_latency_p99_seconds{broker=\"%s\",mode=\"%s\"} %f\n", broker, mode, m.P99.Seconds())
+    }
 
 	return nil
 }

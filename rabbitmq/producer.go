@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -17,21 +18,18 @@ type RabbitProducer struct {
 	channel *amqp.Channel
 	queue   string
 	conf    *common.BenchmarkConfig
+	LiveSuccessful atomic.Uint64
+	LiveErrors atomic.Uint64
 }
 
 func NewRabbitProducer(conf *common.BenchmarkConfig) (*RabbitProducer, error) {
 	conn, err := amqp.Dial(conf.RabbitURL)
 
-	if err != nil {
-		return nil, err
-	}
+	if err != nil { return nil, err }
 
 	ch, err := conn.Channel()
 
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
+	if err != nil { conn.Close(); return nil, err }
 
 	_, err = ch.QueueDeclare(
 		conf.QueueTopic,
@@ -61,12 +59,8 @@ func NewRabbitProducer(conf *common.BenchmarkConfig) (*RabbitProducer, error) {
 }
 
 func (p *RabbitProducer) Close() {
-	if p.channel != nil {
-		p.channel.Close()
-	}
-	if p.conn != nil {
-		p.conn.Close()
-	}
+	if p.channel != nil { p.channel.Close() }
+	if p.conn != nil { p.conn.Close() }
 }
 
 func (p *RabbitProducer) Run() (*common.Metrics, error) {
@@ -89,7 +83,6 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	allLatencies := []time.Duration{}
-	var errors, successful int 
 
 	work := make(chan struct {}, total)
 	for i := 0; i < total; i++ {
@@ -108,18 +101,14 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 			ch, err := p.conn.Channel()
 			if err != nil {
 				log.Printf("Worker: %d: failed to open channel: %v", workerID, err)
-				mu.Lock()
-				errors++
-				mu.Unlock()
+				p.LiveErrors.Add(1)
 				return
 			}
 
 			defer ch.Close()
 			if err := ch.Confirm(false); err != nil {
 				log.Printf("Worker %d: confirm error: %v", workerID, err)
-				mu.Lock()
-				errors++
-				mu.Unlock()
+				p.LiveErrors.Add(1)
 				return
 			}
 			
@@ -148,37 +137,35 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 
 				if err != nil {
 					log.Printf("Worker %d: publish error: %v", workerID, err)
-					mu.Lock()
-					errors++
-					mu.Unlock()
+					p.LiveErrors.Add(1)
 					continue
 				}
 
 				confirm := <-confirms
 				latency := time.Since(startSend)
 
-				mu.Lock()
 				if confirm.Ack {
+					p.LiveSuccessful.Add(1)
+					mu.Lock()
 					allLatencies = append(allLatencies, latency)
-					successful++
+					mu.Unlock()
 				} else {
-					errors++
+					p.LiveErrors.Add(1)
 					fmt.Printf("Worker %d: Message NACKed\n", workerID)
 				}
-				mu.Unlock()
 			}
 		}(i)
 	}
 
 	wg.Wait()
 	duration := time.Since(start)
-
-	fmt.Printf("DEBUG SUMMARY: Successful=%d | Errors=%d | Latencies=%d | Duration=%.2fs\n",
-        successful, errors, len(allLatencies), duration.Seconds())
-
+	finalErrors := int(p.LiveErrors.Load())
+	finalSuccessful := int(p.LiveSuccessful.Load())
+	
 	totalBytes := int64(total) * int64(msgSize)
-	metrics := common.ComputeMetrics(allLatencies, successful, duration, totalBytes)
-	metrics.Errors = errors
-	metrics.TotalMessages = successful
+
+	metrics := common.ComputeMetrics(allLatencies, finalSuccessful, duration, totalBytes)
+	metrics.Errors = finalErrors
+	metrics.TotalMessages = finalSuccessful
 	return &metrics, nil
 }

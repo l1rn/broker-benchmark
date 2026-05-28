@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -17,6 +18,8 @@ type RabbitConsumer struct {
 	conn    *amqp.Connection
 	queue   string
 	conf    *common.BenchmarkConfig
+	LiveReceived atomic.Uint64
+	LiveErrors atomic.Uint64
 }
 
 func NewRabbitConsumer(conf *common.BenchmarkConfig) (*RabbitConsumer, error) {
@@ -52,7 +55,6 @@ func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var received, errors int
 	var latencies []time.Duration
 
 	start := time.Now()
@@ -67,9 +69,7 @@ func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 			err = ch.Qos(1000, 0, false)
 			if err != nil {
 				log.Printf("Worker: %d: failed to open channel: %v", workerID, err)
-				mu.Lock()
-				errors++
-				mu.Unlock()
+				c.LiveErrors.Add(1)
 				return
 			}
 			defer ch.Close()
@@ -82,9 +82,7 @@ func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 
 			if err != nil {
 				log.Printf("Worker %d consume error: %v", workerID, err)
-				mu.Lock()
-				errors++
-				mu.Unlock()
+				c.LiveErrors.Add(1)
 				return
 			}
 			readyOnce.Do(func() {
@@ -105,12 +103,12 @@ func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 
 					mu.Lock()
 					latencies = append(latencies, latency)
+					mu.Unlock()
 
-					received++
-					if received >= total {
+					currentReceived := c.LiveReceived.Add(1)
+					if currentReceived >= uint64(total) {
 						cancel()
 					}
-					mu.Unlock()
 				case <-ctx.Done():
 					return
 				}
@@ -121,10 +119,13 @@ func (c *RabbitConsumer) Run(ready chan struct{}) (*common.Metrics, error) {
 	wg.Wait()
 	duration := time.Since(start)
 
-	totalBytes := int64(total) * int64(c.conf.MessageSize)
-	metrics := common.ComputeMetrics(latencies, received-errors, duration, totalBytes)
-	metrics.Errors = errors
+	finalReceived := int(c.LiveReceived.Load())
+    finalErrors := int(c.LiveErrors.Load())
 
+	totalBytes := int64(total) * int64(c.conf.MessageSize)
+	metrics := common.ComputeMetrics(latencies, finalReceived-finalErrors, duration, totalBytes)
+	metrics.Errors = finalErrors
+	metrics.TotalMessages = finalReceived
 	return &metrics, nil
 }
 

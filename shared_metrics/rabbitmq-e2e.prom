@@ -1,40 +1,8 @@
-# HELP benchmark_start_time_seconds Unix timestamp of when the benchmark started.
-# TYPE benchmark_start_time_seconds gauge
-# HELP benchmark_total_messages Total messages processed.
-# TYPE benchmark_total_messages gauge
-# HELP benchmark_duration_seconds Benchmark duration.
-# TYPE benchmark_duration_seconds gauge
-# HELP benchmark_throughput_msg_per_sec Messages per second.
-# TYPE benchmark_throughput_msg_per_sec gauge
-# HELP benchmark_throughput_mb_per_sec MB per second.
-# TYPE benchmark_throughput_mb_per_sec gauge
-# HELP benchmark_latency_p50_seconds 50th percentile latency.
-# TYPE benchmark_latency_p50_seconds gauge
-# HELP benchmark_latency_p95_seconds 95th percentile latency.
-# TYPE benchmark_latency_p95_seconds gauge
-# HELP benchmark_latency_p99_seconds 99th percentile latency.
-# TYPE benchmark_latency_p99_seconds gauge
-benchmark_start_time_seconds{broker="rabbitmq",mode="e2e",start_time="1779905699"} 1779905699
-benchmark_total_messages{broker="rabbitmq",mode="e2e",start_time="1779905699"} 10000
-benchmark_duration_seconds{broker="rabbitmq",mode="e2e",start_time="1779905699"} 13.152444
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905699"} 20737.78
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905699"} 20.25
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e",start_time="1779905699"} 1474.171052
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e",start_time="1779905699"} 1553.876087
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e",start_time="1779905699"} 1554.282163
-benchmark_start_time_seconds{broker="rabbitmq",mode="e2e",start_time="1779905714"} 1779905714
-benchmark_total_messages{broker="rabbitmq",mode="e2e",start_time="1779905714"} 10000
-benchmark_duration_seconds{broker="rabbitmq",mode="e2e",start_time="1779905714"} 14.078169
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905714"} 18801.06
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905714"} 18.36
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e",start_time="1779905714"} 1396.743039
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e",start_time="1779905714"} 1482.941309
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e",start_time="1779905714"} 1483.391461
-benchmark_start_time_seconds{broker="rabbitmq",mode="e2e",start_time="1779905731"} 1779905731
-benchmark_total_messages{broker="rabbitmq",mode="e2e",start_time="1779905731"} 10000
-benchmark_duration_seconds{broker="rabbitmq",mode="e2e",start_time="1779905731"} 13.504389
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905731"} 21311.17
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e",start_time="1779905731"} 20.81
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e",start_time="1779905731"} 1329.781831
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e",start_time="1779905731"} 1405.824642
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e",start_time="1779905731"} 1406.292043
+benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1779956563
+benchmark_total_messages{broker="rabbitmq",mode="e2e"} 1000000
+benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 124.411708
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 8036.70
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 7.85
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000131
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000205
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000339

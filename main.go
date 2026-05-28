@@ -151,7 +151,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.chosenMode = "producer" 
 				}
 				m.state = stateRunning 
-				return m, runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())			}
+				return m, runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())			
+			}
 		}
 	case benchmarkFinishedMsg:
 		m.state = stateCompleted

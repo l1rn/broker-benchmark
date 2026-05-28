@@ -36,7 +36,7 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	}
 	_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	benchmarkStartTime := time.Now()
 	done := make(chan bool)
 

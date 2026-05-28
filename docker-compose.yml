@@ -98,6 +98,23 @@ services:
       - broker-net
     depends_on:
       - grafana-renderer
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8083:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - broker-net
+    restart: unless-stopped
   grafana-renderer:
     image: grafana/grafana-image-renderer:latest
     container_name: grafana-renderer

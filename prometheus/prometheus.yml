@@ -8,12 +8,25 @@ scrape_configs:
         labels:
           _cluster: "kraft"
           _environment: "docker"
+  
   - job_name: node-exporter
     static_configs:
       - targets: ["node-exporter:9100"]
+  
   - job_name: "benchmark"
     static_configs:
       - targets: ["host.docker.internal:8081"]
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metric_relabel_configs:
+      - source_labels: [container_name, container_label_com_docker_compose_service]
+        regex: '.*(kafka|rabbitmq)*.'
+        action: keep
+      - source_labels: [container_name]
+        regex: '^$'
+        action: keep
 
   - job_name: rabbitmq
     static_configs:

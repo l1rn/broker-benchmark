@@ -51,9 +51,10 @@ import (
 				reader := kafka.NewReader(kafka.ReaderConfig{
 					Brokers:   []string{c.conf.Brokers},
 					Topic:     c.conf.KafkaTopic,
+					Partition: workerID,
 					MinBytes:  1,
 					MaxBytes:  10e6,
-					MaxWait: 1 * time.Millisecond,
+					MaxWait: 100 * time.Millisecond,
 					QueueCapacity: 1000,
 				})
 				defer reader.Close()
@@ -84,7 +85,6 @@ import (
 					}
 
 					ts := int64(binary.BigEndian.Uint64(m.Value[:8]))
-
 					latency := time.Since(time.Unix(0, ts))
 
 					mu.Lock()
@@ -92,7 +92,7 @@ import (
 					mu.Unlock()
 
 					currentReceived := c.LiveReceived.Add(1)
-					if currentReceived >= uint64(total-1) {
+					if currentReceived >= uint64(total) {
 						cancel()
 					}
 

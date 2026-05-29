@@ -36,8 +36,17 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	}
 	_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
 
-	ticker := time.NewTicker(2 * time.Second)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		consMetrics, consErr = consumer.Run("e2e", consumerReady)
+	}()
+
+	<-consumerReady
+	time.Sleep(4 * time.Second)
+	
 	benchmarkStartTime := time.Now()
+	ticker := time.NewTicker(2 * time.Second)
 	done := make(chan bool)
 
 	go func ()  {
@@ -66,13 +75,9 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 		}
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		consMetrics, consErr = consumer.Run("e2e", consumerReady)
-	}()
-
-	<-consumerReady
+	
+	
+	benchmarkStartTime = time.Now()
 
 	wg.Add(1)
 	go func() {

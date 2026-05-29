@@ -26,8 +26,7 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequireOne,
-		BatchSize:    1000,
-		BatchTimeout: 10,
+		BatchTimeout: 100 * time.Millisecond,
 		Async:        false,
 	}
 
@@ -66,34 +65,38 @@ func (p *KafkaProducer) Run() (*common.Metrics, error) {
 			defer wg.Done()
 			count := msgsPerWorker
 
-			if workerID < rem {
-				count++
-			}
+			if workerID < rem { count++ }
+			batchSize := 1000
+			batch := make([]kafka.Message, 0, batchSize)
+
 			for j := 0; j < count; j++ {
 				buf := make([]byte, 8+len(basePayload))
-
 				ts := time.Now().UnixNano()
-
 				binary.BigEndian.PutUint64(buf[:8], uint64(ts))
 				copy(buf[8:], basePayload)
-				startSend := time.Now()
+				batch = append(batch, kafka.Message{
+					Key:   []byte(fmt.Sprintf("%d-%d", workerID, j)),
+					Value: buf,
+				})
 
-				err := p.writer.WriteMessages(
-					context.Background(),
-					kafka.Message{
-						Key:   []byte(fmt.Sprintf("%d-%d", workerID, j)),
-						Value: buf, 
-					},
-				)
-
-				lat := time.Since(startSend)				
-				if err != nil {
-					p.LiveErrors.Add(1)
-				} else {
-					p.LiveSent.Add(1)
+				if len(batch) == batchSize || j == count-1 {
+					startSend := time.Now()
+					
+					err := p.writer.WriteMessages(context.Background(), batch...)
+					lat := time.Since(startSend)
+					
 					mu.Lock()
-					latencies = append(latencies, lat)
+					if err != nil {
+						p.LiveErrors.Add(uint64(len(batch)))
+					} else {
+						p.LiveSent.Add(uint64(len(batch)))
+						for k := 0; k < len(batch); k++ {
+							latencies = append(latencies, lat)
+						}
+					}
 					mu.Unlock()
+					
+					batch = batch[:0]
 				}
 			}
 		}(i)

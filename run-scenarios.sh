@@ -2,7 +2,7 @@
 
 BROKERS=("rabbitmq" "kafka")
 SIZES=(100 1024 10240 51200 102400)
-REPEATS=3
+REPEATS=1
 
 for broker in "${BROKERS[@]}"; do
   for size in "${SIZES[@]}"; do
@@ -18,9 +18,6 @@ for broker in "${BROKERS[@]}"; do
         --metrics-textfile="shared_metrics/${broker}_size${size}_run${r}.prom"
       
       sleep 10
-      
-      docker compose restart "$broker"
-      sleep 15
     done
   done
 done

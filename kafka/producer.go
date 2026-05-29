@@ -25,7 +25,7 @@ func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
 		Addr:         kafka.TCP(conf.Brokers),
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequireOne,
+		RequiredAcks: kafka.RequireAll,
 		BatchTimeout: 100 * time.Millisecond,
 		Async:        false,
 	}

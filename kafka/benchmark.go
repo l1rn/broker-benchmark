@@ -43,7 +43,6 @@ func RunE2E(conf *common.BenchmarkConfig) (*common.Metrics, error) {
 	}()
 
 	<-consumerReady
-	time.Sleep(4 * time.Second)
 	
 	benchmarkStartTime := time.Now()
 	ticker := time.NewTicker(2 * time.Second)

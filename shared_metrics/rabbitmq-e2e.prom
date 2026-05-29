@@ -1,8 +1,8 @@
-benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1780084858
-benchmark_total_messages{broker="rabbitmq",mode="e2e"} 100000
-benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 3.298053
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 30297.39
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 29.59
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000133
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000196
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000289
+benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1780085167
+benchmark_total_messages{broker="rabbitmq",mode="e2e"} 50000
+benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 1.861814
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 26828.45
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 26.20
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000143
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000251
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000399

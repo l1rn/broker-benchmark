@@ -252,7 +252,7 @@ func runBenchmarkCmd(conf *common.BenchmarkConfig, broker, mode string, textfile
 		if err == nil { 
 			targetPath := textfilePath 
 			if targetPath == "" {
-				targetPath = filepath.Join("shared_metrics", fmt.Sprintf("%s-%s.prom", broker, mode))
+				targetPath = filepath.Join("shared_metrics", fmt.Sprintf("%s-%s-c%d-p%d.prom", broker, mode, conf.Consumers, conf.Producers))
 			}
 
 			dir := filepath.Dir(targetPath)

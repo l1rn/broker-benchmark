@@ -1,0 +1,8 @@
+benchmark_start_time_seconds{broker="rabbitmq",mode="consumer"} 1780085632
+benchmark_total_messages{broker="rabbitmq",mode="consumer"} 50000
+benchmark_duration_seconds{broker="rabbitmq",mode="consumer"} 5.757408
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="consumer"} 8684.46
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="consumer"} 8.48
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="consumer"} 0.000103
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="consumer"} 0.000126
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="consumer"} 0.000151

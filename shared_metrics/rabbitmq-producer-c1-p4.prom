@@ -1,0 +1,24 @@
+# HELP benchmark_start_time_seconds Unix timestamp of when the benchmark started.
+# TYPE benchmark_start_time_seconds gauge
+# HELP benchmark_total_messages Total messages processed.
+# TYPE benchmark_total_messages gauge
+# HELP benchmark_duration_seconds Benchmark duration.
+# TYPE benchmark_duration_seconds gauge
+# HELP benchmark_throughput_msg_per_sec Messages per second.
+# TYPE benchmark_throughput_msg_per_sec gauge
+# HELP benchmark_throughput_mb_per_sec MB per second.
+# TYPE benchmark_throughput_mb_per_sec gauge
+# HELP benchmark_latency_p50_seconds 50th percentile latency.
+# TYPE benchmark_latency_p50_seconds gauge
+# HELP benchmark_latency_p95_seconds 95th percentile latency.
+# TYPE benchmark_latency_p95_seconds gauge
+# HELP benchmark_latency_p99_seconds 99th percentile latency.
+# TYPE benchmark_latency_p99_seconds gauge
+benchmark_start_time_seconds{broker="rabbitmq",mode="producer"} 1780085591
+benchmark_total_messages{broker="rabbitmq",mode="producer"} 50000
+benchmark_duration_seconds{broker="rabbitmq",mode="producer"} 1.759130
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer"} 28423.14
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer"} 27.76
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer"} 0.000135
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer"} 0.000189
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer"} 0.000245

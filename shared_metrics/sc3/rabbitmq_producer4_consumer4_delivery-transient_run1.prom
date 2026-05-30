@@ -1,0 +1,8 @@
+benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1780158381
+benchmark_total_messages{broker="rabbitmq",mode="e2e"} 50000
+benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 1.998264
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 25002.88
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 24.42
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000149
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000279
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000527

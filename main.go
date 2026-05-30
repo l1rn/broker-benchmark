@@ -36,7 +36,7 @@ type model struct {
 	choices      []string
 	cursor       int
 	chosenBroker string
-	chosenMode string
+	chosenMode   string
 	metrics      *common.Metrics
 	err          error
 	startTime    int64
@@ -47,6 +47,7 @@ type model struct {
 func main() {
 	broker := flag.String("broker", "", "Broker type: rabbitmq or kafka")
 	mode := flag.String("mode", "", "Mode: producer, consumer, e2e")
+	deliveryMode := flag.String("delivery-mode", "persistent", "Broker delivery mode: persistent or transient")
 	msgCount := flag.Int("count", 10000, "Number of messages")
 	msgSize := flag.Int("size", 1024, "Message size in bytes")
 	producers := flag.Int("producers", 1, "Number of concurrent producers")
@@ -65,6 +66,7 @@ func main() {
 	conf := &common.BenchmarkConfig{
 		Broker:            *broker,
 		Mode:              *mode,
+		DeliveryMode:      *deliveryMode,
 		MessageCount:      *msgCount,
 		MessageSize:       *msgSize,
 		Producers:         *producers,
@@ -107,10 +109,10 @@ func main() {
 }
 
 func (m model) Init() tea.Cmd {
-	if m.state == stateRunning{
-		return runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())	
+	if m.state == stateRunning {
+		return runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())
 	}
-	
+
 	return nil
 }
 
@@ -125,7 +127,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < len(m.choices)-1{
+			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
 		case "enter":
@@ -144,14 +146,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == stateSelectMode {
 				m.state = stateRunning
 				if m.cursor == 0 {
-					m.chosenMode = "e2e" 
+					m.chosenMode = "e2e"
 				} else if m.cursor == 1 {
 					m.chosenMode = "consumer"
 				} else {
-					m.chosenMode = "producer" 
+					m.chosenMode = "producer"
 				}
-				m.state = stateRunning 
-				return m, runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())			
+				m.state = stateRunning
+				return m, runBenchmarkCmd(m.flagConfig, m.chosenBroker, m.chosenMode, m.textfilePath, time.Now().Unix())
 			}
 		}
 	case benchmarkFinishedMsg:
@@ -162,7 +164,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
-	
+
 }
 
 func (m model) View() string {
@@ -196,7 +198,7 @@ func (m model) View() string {
 }
 
 func runBenchmarkCmd(conf *common.BenchmarkConfig, broker, mode string, textfilePath string, startTime int64) tea.Cmd {
-	return func () tea.Msg  {
+	return func() tea.Msg {
 		conf.Broker = broker
 		conf.Mode = mode
 		var metrics *common.Metrics
@@ -249,8 +251,8 @@ func runBenchmarkCmd(conf *common.BenchmarkConfig, broker, mode string, textfile
 			}
 		}
 
-		if err == nil { 
-			targetPath := textfilePath 
+		if err == nil {
+			targetPath := textfilePath
 			if targetPath == "" {
 				targetPath = filepath.Join("shared_metrics", fmt.Sprintf("%s-%s.prom", broker, mode))
 			}

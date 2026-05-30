@@ -14,11 +14,11 @@
 # TYPE benchmark_latency_p95_seconds gauge
 # HELP benchmark_latency_p99_seconds 99th percentile latency.
 # TYPE benchmark_latency_p99_seconds gauge
-benchmark_start_time_seconds{broker="kafka",mode="producer"} 1780085537
-benchmark_total_messages{broker="kafka",mode="producer"} 50000
-benchmark_duration_seconds{broker="kafka",mode="producer"} 0.130621
-benchmark_throughput_msg_per_sec{broker="kafka",mode="producer"} 382785.71
-benchmark_throughput_mb_per_sec{broker="kafka",mode="producer"} 373.81
-benchmark_latency_p50_seconds{broker="kafka",mode="producer"} 0.009244
-benchmark_latency_p95_seconds{broker="kafka",mode="producer"} 0.012285
-benchmark_latency_p99_seconds{broker="kafka",mode="producer"} 0.015988
+benchmark_start_time_seconds{broker="kafka",mode="e2e"} 1780158382
+benchmark_total_messages{broker="kafka",mode="e2e"} 50000
+benchmark_duration_seconds{broker="kafka",mode="e2e"} 0.124941
+benchmark_throughput_msg_per_sec{broker="kafka",mode="e2e"} 218616.57
+benchmark_throughput_mb_per_sec{broker="kafka",mode="e2e"} 213.51
+benchmark_latency_p50_seconds{broker="kafka",mode="e2e"} 0.036038
+benchmark_latency_p95_seconds{broker="kafka",mode="e2e"} 0.044952
+benchmark_latency_p99_seconds{broker="kafka",mode="e2e"} 0.045895

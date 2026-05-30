@@ -8,6 +8,7 @@ import (
 type BenchmarkConfig struct {
 	Broker string
 	Mode string
+	DeliveryMode string
 	MessageCount int
 	MessageSize int
 	Producers int

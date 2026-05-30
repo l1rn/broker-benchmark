@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,8 +92,11 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 
 	close(work)
 
+	deliveryMode := amqp.Persistent
+	if (strings.ToLower(p.conf.DeliveryMode) == "transient") {
+		deliveryMode = amqp.Transient
+	}
 	start := time.Now()
-
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
@@ -129,7 +133,7 @@ func (p *RabbitProducer) Run() (*common.Metrics, error) {
 					false,
 					false,
 					amqp.Publishing{
-						DeliveryMode: amqp.Persistent,
+						DeliveryMode: deliveryMode,
 						ContentType: "application/octet-stream",
 						Body:        buf,
 					},

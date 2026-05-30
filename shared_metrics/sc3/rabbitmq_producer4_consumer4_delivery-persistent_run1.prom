@@ -14,11 +14,11 @@
 # TYPE benchmark_latency_p95_seconds gauge
 # HELP benchmark_latency_p99_seconds 99th percentile latency.
 # TYPE benchmark_latency_p99_seconds gauge
-benchmark_start_time_seconds{broker="rabbitmq",mode="consumer"} 1780085591
-benchmark_total_messages{broker="rabbitmq",mode="consumer"} 50000
-benchmark_duration_seconds{broker="rabbitmq",mode="consumer"} 4.795685
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="consumer"} 10426.04
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="consumer"} 10.18
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="consumer"} 0.000145
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="consumer"} 0.000208
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="consumer"} 0.000314
+benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1780158379
+benchmark_total_messages{broker="rabbitmq",mode="e2e"} 50000
+benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 1.788685
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 27925.62
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 27.27
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000142
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000225
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000353

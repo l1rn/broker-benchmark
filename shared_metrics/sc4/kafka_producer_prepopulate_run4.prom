@@ -1,0 +1,8 @@
+benchmark_start_time_seconds{broker="kafka",mode="producer"} 1780161562
+benchmark_total_messages{broker="kafka",mode="producer"} 50000
+benchmark_duration_seconds{broker="kafka",mode="producer"} 0.139467
+benchmark_throughput_msg_per_sec{broker="kafka",mode="producer"} 358506.51
+benchmark_throughput_mb_per_sec{broker="kafka",mode="producer"} 350.10
+benchmark_latency_p50_seconds{broker="kafka",mode="producer"} 0.009997
+benchmark_latency_p95_seconds{broker="kafka",mode="producer"} 0.011925
+benchmark_latency_p99_seconds{broker="kafka",mode="producer"} 0.016737

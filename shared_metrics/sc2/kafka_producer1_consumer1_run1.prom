@@ -1,0 +1,8 @@
+benchmark_start_time_seconds{broker="kafka",mode="e2e"} 1780158050
+benchmark_total_messages{broker="kafka",mode="e2e"} 100000
+benchmark_duration_seconds{broker="kafka",mode="e2e"} 0.383132
+benchmark_throughput_msg_per_sec{broker="kafka",mode="e2e"} 217706.73
+benchmark_throughput_mb_per_sec{broker="kafka",mode="e2e"} 212.60
+benchmark_latency_p50_seconds{broker="kafka",mode="e2e"} 0.049856
+benchmark_latency_p95_seconds{broker="kafka",mode="e2e"} 0.098682
+benchmark_latency_p99_seconds{broker="kafka",mode="e2e"} 0.103348

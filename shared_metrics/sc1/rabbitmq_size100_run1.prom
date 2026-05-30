@@ -14,11 +14,11 @@
 # TYPE benchmark_latency_p95_seconds gauge
 # HELP benchmark_latency_p99_seconds 99th percentile latency.
 # TYPE benchmark_latency_p99_seconds gauge
-benchmark_start_time_seconds{broker="kafka",mode="e2e"} 1780086586
-benchmark_total_messages{broker="kafka",mode="e2e"} 10000
-benchmark_duration_seconds{broker="kafka",mode="e2e"} 0.044231
-benchmark_throughput_msg_per_sec{broker="kafka",mode="e2e"} 83920.95
-benchmark_throughput_mb_per_sec{broker="kafka",mode="e2e"} 81.95
-benchmark_latency_p50_seconds{broker="kafka",mode="e2e"} 0.003016
-benchmark_latency_p95_seconds{broker="kafka",mode="e2e"} 0.004779
-benchmark_latency_p99_seconds{broker="kafka",mode="e2e"} 0.006018
+benchmark_start_time_seconds{broker="rabbitmq",mode="e2e"} 1780157826
+benchmark_total_messages{broker="rabbitmq",mode="e2e"} 10000
+benchmark_duration_seconds{broker="rabbitmq",mode="e2e"} 0.864044
+benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="e2e"} 11562.22
+benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="e2e"} 1.10
+benchmark_latency_p50_seconds{broker="rabbitmq",mode="e2e"} 0.000099
+benchmark_latency_p95_seconds{broker="rabbitmq",mode="e2e"} 0.000133
+benchmark_latency_p99_seconds{broker="rabbitmq",mode="e2e"} 0.000203

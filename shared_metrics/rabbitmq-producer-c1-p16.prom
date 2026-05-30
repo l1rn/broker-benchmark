@@ -1,8 +1,0 @@
-benchmark_start_time_seconds{broker="rabbitmq",mode="producer"} 1780085580
-benchmark_total_messages{broker="rabbitmq",mode="producer"} 50000
-benchmark_duration_seconds{broker="rabbitmq",mode="producer"} 0.923802
-benchmark_throughput_msg_per_sec{broker="rabbitmq",mode="producer"} 54124.14
-benchmark_throughput_mb_per_sec{broker="rabbitmq",mode="producer"} 52.86
-benchmark_latency_p50_seconds{broker="rabbitmq",mode="producer"} 0.000266
-benchmark_latency_p95_seconds{broker="rabbitmq",mode="producer"} 0.000460
-benchmark_latency_p99_seconds{broker="rabbitmq",mode="producer"} 0.000724

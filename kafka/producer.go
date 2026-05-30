@@ -21,11 +21,15 @@ type KafkaProducer struct {
 }
 
 func NewKafkaProducer(conf *common.BenchmarkConfig) (*KafkaProducer, error) {
+	deliveryMode := kafka.RequireAll
+	if conf.DeliveryMode == "transient" {
+		deliveryMode = kafka.RequireNone
+	}
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(conf.Brokers),
 		Topic:        conf.KafkaTopic,
 		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequireAll,
+		RequiredAcks: deliveryMode,
 		BatchTimeout: 100 * time.Millisecond,
 		Async:        false,
 	}

@@ -1,0 +1,5 @@
+Broker,Consumers,Producers,Delivery Mode,benchmark_start_time_seconds,benchmark_total_messages,benchmark_duration_seconds,benchmark_throughput_msg_per_sec,benchmark_throughput_mb_per_sec,benchmark_latency_p50_seconds,benchmark_latency_p95_seconds,benchmark_latency_p99_seconds
+rabbitmq,4,4,persistent,1780158379.0,50000.0,1.788685,27925.62,27.27,0.000142,0.000225,0.000353
+rabbitmq,4,4,transient,1780158381.0,50000.0,1.998264,25002.88,24.42,0.000149,0.000279,0.000527
+kafka,4,4,persistent,1780158381.0,50000.0,0.176944,198008.25,193.38,0.011738,0.014719,0.01832
+kafka,4,4,transient,1780158382.0,50000.0,0.124941,218616.57,213.51,0.036038,0.044952,0.045895
